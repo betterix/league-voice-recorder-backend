@@ -24,6 +24,7 @@ from app.security import (
     Role,
     get_client_ip,
     rate_limiter,
+    require_admin_access,
     require_read_access,
     require_write_access,
 )
@@ -215,7 +216,7 @@ def download_recording(
 )
 def delete_recording(
     game_id: str,
-    role: Role = Depends(require_write_access),
+    role: Role = Depends(require_admin_access),
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     """Delete recording file and its associated metadata."""

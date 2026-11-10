@@ -291,6 +291,41 @@ def require_write_access(
     return role
 
 
+def require_admin_access(
+    request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> Role:
+    """Require valid ADMIN_KEY. UPLOAD_KEY and PULL_KEY are forbidden."""
+    settings = get_settings()
+    ip = enforce_not_blocked(request, settings)
+
+    if not x_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing required X-API-Key header",
+        )
+
+    role = authenticate_key(x_api_key, settings)
+    if role is None:
+        rate_limiter.record_auth_failure(
+            ip=ip,
+            max_failures=settings.AUTH_FAILURE_LIMIT_PER_MINUTE,
+            block_duration_minutes=settings.AUTH_BLOCK_DURATION_MINUTES,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+        )
+
+    if role != Role.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Administrator access required to delete recordings",
+        )
+
+    return role
+
+
 # -----------------------------------------------------------------------------
 # TLS Certificate Management & Development Generation
 # -----------------------------------------------------------------------------

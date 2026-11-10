@@ -98,12 +98,20 @@ def test_upload_key_permissions(client: TestClient):
     assert list_resp.status_code == 200
     assert list_resp.json()["total"] >= 1
 
-    # Delete
+    # Delete attempt with upload key must be rejected (403 Forbidden)
     del_resp = client.delete(
         "/api/v1/recordings/8018190002",
         headers={"X-API-Key": TEST_UPLOAD_KEY},
     )
-    assert del_resp.status_code == 200
+    assert del_resp.status_code == 403
+    assert "Administrator access required" in del_resp.json()["detail"]
+
+    # Admin delete succeeds
+    del_admin = client.delete(
+        "/api/v1/recordings/8018190002",
+        headers={"X-API-Key": TEST_ADMIN_KEY},
+    )
+    assert del_admin.status_code == 200
 
 
 def test_admin_key_permissions(client: TestClient):

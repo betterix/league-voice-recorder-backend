@@ -30,9 +30,9 @@ It enables competitive esports teams, players, coaches, and analysts to:
 
 ### 2.3 Strict Three-Key Authentication
 All authenticated endpoints require the `X-API-Key` HTTP header:
-- `UPLOAD_KEY`: Scrimmage recording clients / players (Upload, Download, List, Metadata, Delete).
+- `UPLOAD_KEY`: Scrimmage recording clients / players (Upload, Download, List, Metadata). Destructive delete attempts return `403 Forbidden`.
 - `PULL_KEY`: Analysts, coaches, and teammates (Download, List, Metadata). Write and delete attempts return `403 Forbidden`.
-- `ADMIN_KEY`: Master administrative key granting full read, write, and telemetry access.
+- `ADMIN_KEY`: Master administrative key granting full read, write, delete, and telemetry access.
 - **Constant-Time Verification**: All secret comparisons use `secrets.compare_digest()` to eliminate timing attacks.
 - **Brute-Force IP Protection**: 5 failed authentication attempts from any IP within 60 seconds trigger a temporary 10-minute block across all endpoints (`429 Too Many Requests`).
 
@@ -92,7 +92,7 @@ league-voice-recorder-backend/
 | **Get Recording Metadata** | `GET /api/v1/recordings/{game_id}` | ✅ | ✅ | ✅ |
 | **Download Recording (MP3)** | `GET /api/v1/recordings/{game_id}/download` | ✅ | ✅ | ✅ |
 | **Upload Recording (MP3)** | `POST /api/v1/recordings/{game_id}` | ❌ *(403)* | ✅ | ✅ |
-| **Delete Recording** | `DELETE /api/v1/recordings/{game_id}` | ❌ *(403)* | ✅ | ✅ |
+| **Delete Recording** | `DELETE /api/v1/recordings/{game_id}` | ❌ *(403)* | ❌ *(403)* | ✅ |
 
 ### Key Generation CLI
 To generate fresh, cryptographically secure 256-bit CSPRNG API keys:

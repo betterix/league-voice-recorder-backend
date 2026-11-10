@@ -133,7 +133,7 @@ X-API-Key: <SECRET_KEY>
 | **Get Recording Metadata** | `GET /api/v1/recordings/{game_id}` | ✅ | ✅ | ✅ |
 | **Download Recording** | `GET /api/v1/recordings/{game_id}/download` | ✅ | ✅ | ✅ |
 | **Upload Recording** | `POST /api/v1/recordings/{game_id}` | ❌ *(403)* | ✅ | ✅ |
-| **Delete Recording** | `DELETE /api/v1/recordings/{game_id}` | ❌ *(403)* | ✅ | ✅ |
+| **Delete Recording** | `DELETE /api/v1/recordings/{game_id}` | ❌ *(403)* | ❌ *(403)* | ✅ |
 
 ### 5.2 Security Implementation
 - **Constant-Time Comparison**: Key comparisons execute via `secrets.compare_digest()` to eliminate timing attack vectors.
@@ -298,9 +298,9 @@ Stream the MP3 audio file directly to the client with full HTTP Range support.
 ---
 
 #### `DELETE /api/v1/recordings/{game_id}`
-Remove a recording file from disk and purge its metadata from the database.
+Remove a recording file from disk and purge its metadata from the database. Strictly restricted to administrative access.
 
-- **Permissions**: `UPLOAD_KEY` or `ADMIN_KEY`
+- **Permissions**: `ADMIN_KEY` only
 - **Responses**:
   - `200 OK`:
     ```json
@@ -309,7 +309,7 @@ Remove a recording file from disk and purge its metadata from the database.
       "game_id": "8018190134"
     }
     ```
-  - `403 Forbidden`: Attempted deletion using a read-only `PULL_KEY`.
+  - `403 Forbidden`: Attempted deletion using a non-admin key (`UPLOAD_KEY` or `PULL_KEY`).
   - `404 Not Found`: Recording does not exist.
 
 ---

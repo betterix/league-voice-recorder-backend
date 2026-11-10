@@ -180,7 +180,7 @@ def test_get_nonexistent_metadata(client: TestClient):
 
 
 def test_delete_recording_success(client: TestClient, test_settings: Settings):
-    """Verify deletion removes file from disk and record from database."""
+    """Verify only admin can delete recordings from disk and database."""
     mp3_data = generate_valid_mp3_bytes()
     game_id = "8018190360"
 
@@ -194,13 +194,27 @@ def test_delete_recording_success(client: TestClient, test_settings: Settings):
     disk_path = test_settings.STORAGE_DIR / f"{game_id}.mp3"
     assert disk_path.exists()
 
-    # Delete
-    del_resp = client.delete(
+    # Attempt delete with PULL_KEY -> 403 Forbidden
+    del_pull = client.delete(
+        f"/api/v1/recordings/{game_id}",
+        headers={"X-API-Key": TEST_PULL_KEY},
+    )
+    assert del_pull.status_code == 403
+
+    # Attempt delete with UPLOAD_KEY -> 403 Forbidden
+    del_upload = client.delete(
         f"/api/v1/recordings/{game_id}",
         headers={"X-API-Key": TEST_UPLOAD_KEY},
     )
-    assert del_resp.status_code == 200
-    assert f"'{game_id}' successfully deleted" in del_resp.json()["message"]
+    assert del_upload.status_code == 403
+
+    # Delete with ADMIN_KEY -> 200 OK
+    del_admin = client.delete(
+        f"/api/v1/recordings/{game_id}",
+        headers={"X-API-Key": TEST_ADMIN_KEY},
+    )
+    assert del_admin.status_code == 200
+    assert f"'{game_id}' successfully deleted" in del_admin.json()["message"]
 
     # Verify file removed from disk
     assert not disk_path.exists()
@@ -214,10 +228,10 @@ def test_delete_recording_success(client: TestClient, test_settings: Settings):
 
 
 def test_delete_nonexistent_recording(client: TestClient):
-    """Verify deleting a non-existent recording returns HTTP 404."""
+    """Verify deleting a non-existent recording returns HTTP 404 for admin."""
     del_resp = client.delete(
         "/api/v1/recordings/missing888",
-        headers={"X-API-Key": TEST_UPLOAD_KEY},
+        headers={"X-API-Key": TEST_ADMIN_KEY},
     )
     assert del_resp.status_code == 404
     assert "not found" in del_resp.json()["detail"].lower()
