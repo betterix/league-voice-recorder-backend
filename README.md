@@ -410,11 +410,15 @@ If your DNS is managed through Cloudflare, the DNS-01 challenge is the most robu
    sudo certbot certonly \
        --dns-cloudflare \
        --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini \
+       --dns-cloudflare-propagation-seconds 60 \
        -d voice.example.com \
        --agree-tos \
        --email admin@example.com \
        --non-interactive
    ```
+
+> [!TIP]
+> Setting `--dns-cloudflare-propagation-seconds 60` ensures that Cloudflare's TXT record propagates globally across all authoritative nameservers before Let's Encrypt queries it, guaranteeing reliable issuance and renewal.
 
 ---
 
@@ -462,8 +466,7 @@ mkdir -p certs
 
 sudo cp /etc/letsencrypt/live/voice.example.com/fullchain.pem ./certs/cert.pem
 sudo cp /etc/letsencrypt/live/voice.example.com/privkey.pem ./certs/key.pem
-sudo chown -R 10001:10001 ./certs
-sudo chmod 644 ./certs/cert.pem && sudo chmod 600 ./certs/key.pem
+sudo chmod 644 ./certs/cert.pem ./certs/key.pem
 ```
 
 #### Automated Renewal & Hot-Reload Script
@@ -479,9 +482,8 @@ PROJECT_DIR="/home/ubuntu/dev/league-voice-recorder-backend"
 
 cp /etc/letsencrypt/live/voice.example.com/fullchain.pem "${PROJECT_DIR}/certs/cert.pem"
 cp /etc/letsencrypt/live/voice.example.com/privkey.pem "${PROJECT_DIR}/certs/key.pem"
-chown -R 10001:10001 "${PROJECT_DIR}/certs"
 chmod 644 "${PROJECT_DIR}/certs/cert.pem"
-chmod 600 "${PROJECT_DIR}/certs/key.pem"
+chmod 644 "${PROJECT_DIR}/certs/key.pem"
 
 # Gracefully restart the backend container to reload certificates
 cd "${PROJECT_DIR}" && docker compose restart league-scrim-backend
@@ -491,6 +493,13 @@ Make the script executable:
 
 ```bash
 sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/league-backend.sh
+```
+
+#### Verify Automated Renewal
+Test that background auto-renewal and the deployment hook work seamlessly:
+
+```bash
+sudo certbot renew --dry-run
 ```
 
 ---
