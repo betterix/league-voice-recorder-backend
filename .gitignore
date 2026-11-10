@@ -1,0 +1,13 @@
+.env
+certs/*
+!certs/.gitkeep
+
+data/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.pyc
+*.egg-info/
+.coverage
+htmlcov/

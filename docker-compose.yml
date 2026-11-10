@@ -1,0 +1,20 @@
+services:
+  league-scrim-backend:
+    container_name: league-scrim-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8443}:${PORT:-8443}"
+    env_file:
+      - .env
+    volumes:
+      - ./data/recordings:/app/data/recordings
+      - ./data/db:/app/data/db
+      - ./certs:/app/certs:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false
