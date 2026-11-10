@@ -31,7 +31,7 @@ flowchart TD
         Coach["Coach / Analyst\n(Desktop App / Script)"]
     end
 
-    subgraph VPS["VPS Public Host (lvr.szsolt.com)"]
+    subgraph VPS["VPS Public Host (voice.example.com)"]
         Port["Direct Port Listener\n:8443 (HTTPS)"]
         
         subgraph Container["Docker Container (league-scrim-backend)"]
@@ -330,8 +330,8 @@ The backend incorporates a thread-safe sliding-window rate limiter tailored for 
 
 ### 7.2 HTTP Host Protection
 FastAPI `TrustedHostMiddleware` is configured to only allow requests matching:
-- The configured `DOMAIN_NAME` (e.g. `lvr.szsolt.com`)
-- Subdomains (`*.lvr.szsolt.com`)
+- The configured `DOMAIN_NAME` (e.g. `voice.example.com`)
+- Subdomains (`*.example.com`)
 - `localhost` and `127.0.0.1`
 
 Any HTTP request with an unauthorized `Host` header is immediately rejected with HTTP `400 Bad Request`.
@@ -347,10 +347,10 @@ In your DNS provider, configure a direct A-record pointing to your VPS public IP
 
 | Type | Name | Content / Target | Proxy Status | TTL |
 |---|---|---|---|---|
-| **A** | `lvr` | `<YOUR_VPS_PUBLIC_IPV4>` | **DNS Only (No proxy / No CDN)** | Auto / 300s |
+| **A** | `voice` *(or `@`)* | `<YOUR_VPS_PUBLIC_IPV4>` | **DNS Only (No proxy / No CDN)** | Auto / 300s |
 
 > [!IMPORTANT]
-> If your DNS provider offers proxying or CDN features, ensure they are **disabled (DNS-only)**. Proxies buffer streaming multipart uploads and enforce upload size caps that break large scrimmage recordings.
+> If your DNS provider offers proxying or CDN features, ensure they are **disabled (DNS-only)**. Proxies buffer streaming multipart uploads and enforce upload size caps that break large scrimmage recordings. Direct A-record routing directly to your VPS IP is required.
 
 ---
 
@@ -378,9 +378,9 @@ sudo apt-get install -y certbot
 
 # 2. Stop any process binding to port 80, then issue certificate
 sudo certbot certonly --standalone \
-    -d lvr.szsolt.com \
+    -d voice.example.com \
     --agree-tos \
-    --email admin@szsolt.com \
+    --email admin@example.com \
     --non-interactive
 ```
 
@@ -390,8 +390,8 @@ Mount certificates into `./certs`:
 cd /home/ubuntu/dev/league-voice-recorder-backend
 mkdir -p certs
 
-sudo cp /etc/letsencrypt/live/lvr.szsolt.com/fullchain.pem ./certs/cert.pem
-sudo cp /etc/letsencrypt/live/lvr.szsolt.com/privkey.pem ./certs/key.pem
+sudo cp /etc/letsencrypt/live/voice.example.com/fullchain.pem ./certs/cert.pem
+sudo cp /etc/letsencrypt/live/voice.example.com/privkey.pem ./certs/key.pem
 sudo chown -R 10001:10001 ./certs
 sudo chmod 644 ./certs/cert.pem && sudo chmod 600 ./certs/key.pem
 ```
@@ -407,8 +407,8 @@ set -e
 
 PROJECT_DIR="/home/ubuntu/dev/league-voice-recorder-backend"
 
-cp /etc/letsencrypt/live/lvr.szsolt.com/fullchain.pem "${PROJECT_DIR}/certs/cert.pem"
-cp /etc/letsencrypt/live/lvr.szsolt.com/privkey.pem "${PROJECT_DIR}/certs/key.pem"
+cp /etc/letsencrypt/live/voice.example.com/fullchain.pem "${PROJECT_DIR}/certs/cert.pem"
+cp /etc/letsencrypt/live/voice.example.com/privkey.pem "${PROJECT_DIR}/certs/key.pem"
 chown -R 10001:10001 "${PROJECT_DIR}/certs"
 chmod 644 "${PROJECT_DIR}/certs/cert.pem"
 chmod 600 "${PROJECT_DIR}/certs/key.pem"
@@ -477,7 +477,7 @@ Copy the generated keys into `.env`:
 
 ```env
 # Server Configuration
-DOMAIN_NAME=lvr.szsolt.com
+DOMAIN_NAME=voice.example.com
 PORT=8443
 ENVIRONMENT=production
 
@@ -521,7 +521,9 @@ docker compose logs -f league-scrim-backend
 Verify TLS 1.3 negotiation using `curl`:
 
 ```bash
-curl -v --tlsv1.3 --tls-max 1.3 https://lvr.szsolt.com:8443/api/v1/health
+curl -v --tlsv1.3 --tls-max 1.3 \
+    -H "X-API-Key: lvr_pull_<GENERATED_RANDOM_SECRET>" \
+    https://voice.example.com:8443/api/v1/health
 ```
 
 Expected output confirms:

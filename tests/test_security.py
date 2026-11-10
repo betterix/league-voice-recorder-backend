@@ -176,7 +176,7 @@ def test_trusted_host_protection(client: TestClient):
     # Allowed host header
     resp_ok = client.get(
         "/api/v1/health",
-        headers={"Host": "lvr.szsolt.com", "X-API-Key": TEST_PULL_KEY},
+        headers={"Host": "voice.example.com", "X-API-Key": TEST_PULL_KEY},
     )
     assert resp_ok.status_code == 200
 
@@ -189,7 +189,7 @@ def test_tls_ecdsa_generation_and_validation(temp_workspace: dict[str, Path]):
     fingerprint = generate_self_signed_cert(
         cert_path=cert_path,
         key_path=key_path,
-        domain="lvr.szsolt.com",
+        domain="voice.example.com",
     )
 
     assert cert_path.exists()
@@ -280,7 +280,7 @@ def test_tls13_context_factory(temp_workspace: dict[str, Path]):
 
     cert_path = temp_workspace["certs_dir"] / "cert.pem"
     key_path = temp_workspace["certs_dir"] / "key.pem"
-    generate_self_signed_cert(cert_path, key_path, "lvr.szsolt.com")
+    generate_self_signed_cert(cert_path, key_path, "voice.example.com")
 
     ctx = tls13_ssl_context_factory(
         certfile=str(cert_path),
@@ -302,7 +302,7 @@ async def test_lifespan_production_tls_success_and_failure(temp_workspace: dict[
     # 1. Missing cert in production -> raises RuntimeError
     prod_settings_invalid = Settings(
         ENVIRONMENT="production",
-        DOMAIN_NAME="lvr.szsolt.com",
+        DOMAIN_NAME="voice.example.com",
         UPLOAD_KEY="valid-random-upload-token-12345678",
         PULL_KEY="valid-random-pull-token-65432199",
         SSL_CERT=cert_path,
@@ -318,10 +318,10 @@ async def test_lifespan_production_tls_success_and_failure(temp_workspace: dict[
             pass
 
     # 2. Valid cert in production -> succeeds
-    generate_self_signed_cert(cert_path, key_path, "lvr.szsolt.com")
+    generate_self_signed_cert(cert_path, key_path, "voice.example.com")
     prod_settings_valid = Settings(
         ENVIRONMENT="production",
-        DOMAIN_NAME="lvr.szsolt.com",
+        DOMAIN_NAME="voice.example.com",
         UPLOAD_KEY="valid-random-upload-token-12345678",
         PULL_KEY="valid-random-pull-token-65432199",
         SSL_CERT=cert_path,

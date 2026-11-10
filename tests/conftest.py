@@ -74,7 +74,7 @@ def test_settings(temp_workspace: dict[str, Path]) -> Settings:
     """Instantiate test-specific Settings."""
     settings = Settings(
         ENVIRONMENT="test",
-        DOMAIN_NAME="lvr.szsolt.com",
+        DOMAIN_NAME="voice.example.com",
         PORT=8443,
         STORAGE_DIR=temp_workspace["storage_dir"],
         DB_DIR=temp_workspace["db_dir"],

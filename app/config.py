@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     )
 
     # Server Configuration
-    DOMAIN_NAME: str = Field(default="lvr.szsolt.com", description="Direct-access public domain")
+    DOMAIN_NAME: str = Field(default="voice.example.com", description="Direct-access public domain")
     PORT: int = Field(default=8443, ge=1, le=65535, description="Direct HTTPS listener port")
     ENVIRONMENT: Literal["production", "development", "test"] = Field(
         default="production", description="Runtime environment"
