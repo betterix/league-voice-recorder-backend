@@ -369,14 +369,80 @@ The backend will automatically generate an ECDSA P-256 certificate with Subject 
 
 ### Option B: Trusted Let's Encrypt Certificates (Production)
 
-On your Ubuntu/Debian host, install Certbot and obtain trusted Let's Encrypt certificates:
+To obtain publicly trusted certificates with zero browser or client warnings, use Certbot with Let's Encrypt. 
+
+Depending on your DNS provider and server setup, choose the method that fits your environment:
+
+#### Method 1: Automated Cloudflare DNS-01 (Recommended for Cloudflare Users)
+
+If your DNS is managed through Cloudflare, the DNS-01 challenge is the most robust setup:
+- **Zero open ports required**: Does not bind or require port 80 or 443, eliminating conflicts with any existing web servers, reverse proxies, or Kubernetes ingresses on the host.
+- **Fully automated renewal**: Renews automatically via systemd timer (`certbot.timer`) every 60 days without manual interaction.
+
+1. **Install Certbot & Cloudflare DNS Plugin**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y certbot python3-certbot-dns-cloudflare
+   ```
+
+2. **Create Cloudflare API Token**:
+   - In Cloudflare Dashboard, navigate to **My Profile > API Tokens > Create Token**.
+   - Use the **Edit zone DNS** template.
+   - Set **Permissions**: `Zone - DNS - Edit`.
+   - Set **Zone Resources**: `Include - Specific zone - yourdomain.com`.
+
+3. **Save Credentials File**:
+   ```bash
+   sudo mkdir -p /etc/letsencrypt
+   sudo nano /etc/letsencrypt/cloudflare.ini
+   ```
+   Add the following line:
+   ```ini
+   dns_cloudflare_api_token = <YOUR_CLOUDFLARE_API_TOKEN>
+   ```
+   Secure the file permissions:
+   ```bash
+   sudo chmod 600 /etc/letsencrypt/cloudflare.ini
+   ```
+
+4. **Issue the Certificate**:
+   ```bash
+   sudo certbot certonly \
+       --dns-cloudflare \
+       --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini \
+       -d voice.example.com \
+       --agree-tos \
+       --email admin@example.com \
+       --non-interactive
+   ```
+
+---
+
+#### Method 2: Manual DNS TXT Challenge (Any DNS Provider)
+
+If you don't want to create an API token or use another DNS provider:
 
 ```bash
-# 1. Install Certbot
-sudo apt-get update
-sudo apt-get install -y certbot
+sudo certbot certonly --manual --preferred-challenges dns \
+    -d voice.example.com \
+    --agree-tos \
+    --email admin@example.com
+```
 
-# 2. Stop any process binding to port 80, then issue certificate
+Certbot will output a TXT record prompt:
+- **Type**: `TXT`
+- **Name**: `_acme-challenge.voice`
+- **Value**: `<RANDOM_CHALLENGE_STRING>`
+
+Add this TXT record in your DNS provider, wait ~30 seconds for DNS propagation, and press **Enter** to issue your certificate. *(Note: Manual certificates require repeating this command before the 90-day expiry).*
+
+---
+
+#### Method 3: Standalone HTTP-01 Challenge (Dedicated Clean VPS)
+
+For a fresh VPS where port 80 is completely free:
+
+```bash
 sudo certbot certonly --standalone \
     -d voice.example.com \
     --agree-tos \
@@ -384,7 +450,11 @@ sudo certbot certonly --standalone \
     --non-interactive
 ```
 
-Mount certificates into `./certs`:
+---
+
+### Installing Certificates into the Backend
+
+Mount the issued certificates into `./certs`:
 
 ```bash
 cd /home/ubuntu/dev/league-voice-recorder-backend
@@ -396,8 +466,8 @@ sudo chown -R 10001:10001 ./certs
 sudo chmod 644 ./certs/cert.pem && sudo chmod 600 ./certs/key.pem
 ```
 
-#### Automated Renewal with Cron / Certbot Hook
-Configure Certbot's post-renewal hook to refresh certificates and reload the container:
+#### Automated Renewal & Hot-Reload Script
+Configure Certbot's post-renewal deploy hook to automatically copy new certificates and restart the container when Let's Encrypt renews:
 
 Create `/etc/letsencrypt/renewal-hooks/deploy/league-backend.sh`:
 
