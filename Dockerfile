@@ -68,7 +68,7 @@ EXPOSE 8443
 
 # Healthcheck testing direct TLS health endpoint with authenticated API key
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import os, urllib.request, ssl; key = os.environ.get('PULL_KEY') or os.environ.get('UPLOAD_KEY') or ''; req = urllib.request.Request('https://localhost:8443/api/v1/health', headers={'X-API-Key': key}); ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE; urllib.request.urlopen(req, context=ctx, timeout=3)" || exit 1
+    CMD python -c "import os, urllib.request, ssl; port = os.environ.get('PORT', '8443'); key = os.environ.get('PULL_KEY') or os.environ.get('UPLOAD_KEY') or ''; req = urllib.request.Request(f'https://localhost:{port}/api/v1/health', headers={'X-API-Key': key}); ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE; urllib.request.urlopen(req, context=ctx, timeout=3)" || exit 1
 
 # Launch application server
 CMD ["python", "-m", "app.main"]
