@@ -55,7 +55,7 @@ RUN mkdir -p /app/data/recordings /app/data/db /app/certs && \
     chown -R appuser:appuser /app
 
 # Copy application source code
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser app ./app
 
 # Ensure storage directories are owned by appuser
 RUN chown -R appuser:appuser /app/data
