@@ -235,3 +235,89 @@ def test_delete_nonexistent_recording(client: TestClient):
     )
     assert del_resp.status_code == 404
     assert "not found" in del_resp.json()["detail"].lower()
+
+
+def test_health_check_access_log_filter():
+    """Verify HealthCheckFilter suppresses healthy 2xx health checks while preserving errors."""
+    import logging
+
+    from app.main import HealthCheckFilter, configure_access_logging
+
+    f = HealthCheckFilter()
+
+    # 1. Healthy 200 health check via tuple args -> suppressed (False)
+    rec_healthy_tuple = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="server.py",
+        lineno=10,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1", "GET", "/api/v1/health", "1.1", 200),
+        exc_info=None,
+    )
+    assert f.filter(rec_healthy_tuple) is False
+
+    # 2. Unhealthy 503 health check via tuple args -> logged (True)
+    rec_unhealthy_tuple = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="server.py",
+        lineno=10,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1", "GET", "/api/v1/health", "1.1", 503),
+        exc_info=None,
+    )
+    assert f.filter(rec_unhealthy_tuple) is True
+
+    # 3. Server error 500 health check via tuple args -> logged (True)
+    rec_error_tuple = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="server.py",
+        lineno=10,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1", "GET", "/api/v1/health", "1.1", 500),
+        exc_info=None,
+    )
+    assert f.filter(rec_error_tuple) is True
+
+    # 4. Other endpoints with 200 -> logged (True)
+    rec_recordings_tuple = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="server.py",
+        lineno=10,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1", "GET", "/api/v1/recordings", "1.1", 200),
+        exc_info=None,
+    )
+    assert f.filter(rec_recordings_tuple) is True
+
+    # 5. Formatted message fallback
+    rec_formatted_healthy = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="server.py",
+        lineno=10,
+        msg='127.0.0.1 - "GET /api/v1/health HTTP/1.1" 200 OK',
+        args=(),
+        exc_info=None,
+    )
+    assert f.filter(rec_formatted_healthy) is False
+
+    rec_formatted_unhealthy = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="server.py",
+        lineno=10,
+        msg='127.0.0.1 - "GET /api/v1/health HTTP/1.1" 503 Service Unavailable',
+        args=(),
+        exc_info=None,
+    )
+    assert f.filter(rec_formatted_unhealthy) is True
+
+    # 6. configure_access_logging idempotency
+    configure_access_logging()
+    access_logger = logging.getLogger("uvicorn.access")
+    matching_filters = [f for f in access_logger.filters if isinstance(f, HealthCheckFilter)]
+    assert len(matching_filters) == 1

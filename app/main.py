@@ -31,10 +31,57 @@ logging.basicConfig(
 logger = logging.getLogger("league_backend.main")
 
 
+class HealthCheckFilter(logging.Filter):
+    """Filter out successful (2xx) health check access logs to eliminate log spam.
+
+    Unhealthy (5xx), client error (4xx), or unexpected responses on the health
+    endpoint are preserved and logged.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            # Uvicorn access log passes: (client_addr, method, full_path, http_version, status_code)
+            if record.args and len(record.args) >= 5:
+                path = str(record.args[2])
+                status_code = int(record.args[4])
+                if path.startswith("/api/v1/health") and 200 <= status_code < 300:
+                    return False
+        except Exception:
+            pass
+
+        # Fallback for already formatted access log messages
+        try:
+            msg = record.getMessage()
+            if "/api/v1/health" in msg and any(f" {code}" in msg for code in ("200", "204")):
+                return False
+        except Exception:
+            pass
+
+        return True
+
+
+def configure_access_logging() -> None:
+    """Attach HealthCheckFilter to uvicorn.access logger and any attached handlers."""
+    access_logger = logging.getLogger("uvicorn.access")
+    health_filter = HealthCheckFilter()
+    if not any(isinstance(f, HealthCheckFilter) for f in access_logger.filters):
+        access_logger.addFilter(health_filter)
+    for handler in access_logger.handlers:
+        if not any(isinstance(f, HealthCheckFilter) for f in handler.filters):
+            handler.addFilter(health_filter)
+
+
+# Configure filter on module load
+configure_access_logging()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Application lifespan manager initializing directories, database, and verifying TLS."""
     settings = get_settings()
+
+    # Suppress healthy 2xx logs on uvicorn.access
+    configure_access_logging()
 
     # Ensure required directories exist
     settings.ensure_directories()
@@ -211,6 +258,7 @@ def run_server() -> None:
             sys.exit(1)
         logger.warning("Starting server in unencrypted HTTP mode (development/test only)")
 
+    configure_access_logging()
     uvicorn.run(**kwargs)
 
 
