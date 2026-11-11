@@ -6,7 +6,8 @@ FROM python:3.14-alpine AS builder
 WORKDIR /build
 
 # Install build dependencies for compiling Python native wheels
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache \
     gcc \
     musl-dev \
     libffi-dev \
@@ -26,16 +27,19 @@ FROM python:3.14-alpine
 
 # Metadata labels
 LABEL org.opencontainers.image.title="League Voice Recorder Backend" \
-      org.opencontainers.image.description="Centralized direct-port scrim audio backend for League Voice Recorder" \
-      org.opencontainers.image.version="1.0.0" \
-      org.opencontainers.image.authors="League Voice Recorder Team" \
-      org.opencontainers.image.licenses="GPL-3.0"
+    org.opencontainers.image.description="Centralized direct-port scrim audio backend for League Voice Recorder" \
+    org.opencontainers.image.version="1.0.0" \
+    org.opencontainers.image.authors="League Voice Recorder Team" \
+    org.opencontainers.image.licenses="GPL-3.0"
 
 # Install minimal runtime dependencies
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache \
     openssl \
     curl \
     ca-certificates
+
+RUN rm -rf /usr/local/lib/python3.14/site-packages/*
 
 # Create secure non-root system user and group
 RUN addgroup -g 10001 -S appuser && \
