@@ -79,8 +79,7 @@ league-voice-recorder-backend/
 │       ├── __init__.py       # Router definitions
 │       ├── health.py         # Health diagnostics & storage telemetry
 │       └── recordings.py     # Recording upload, list, download, metadata, deletion
-├── certs/
-│   └── .gitkeep              # Mounted directory for TLS certificates
+├── certs/                    # Local mount point for TLS certificates (gitignored)
 ├── tests/
 │   ├── __init__.py           # Test suite package
 │   ├── conftest.py           # Fixtures, test database, and synthetic MP3 generator

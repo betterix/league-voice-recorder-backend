@@ -1,0 +1,41 @@
+version: 2
+
+# Multi-ecosystem grouped updates: combines all dependency updates into a single daily PR
+multi-ecosystem-groups:
+  all-updates:
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+
+updates:
+  # Python dependencies (pyproject.toml & requirements.txt)
+  - package-ecosystem: "pip"
+    directory: "/"
+    multi-ecosystem-group: "all-updates"
+    patterns:
+      - "*"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # GitHub Actions workflow actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    multi-ecosystem-group: "all-updates"
+    patterns:
+      - "*"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Dockerfile base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    multi-ecosystem-group: "all-updates"
+    patterns:
+      - "*"
+    labels:
+      - "dependencies"
+      - "docker"

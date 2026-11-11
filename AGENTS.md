@@ -65,8 +65,7 @@ league-voice-recorder-backend/
 │       ├── dashboard.html    # Zero-dependency modern dark UI
 │       ├── router.py         # Web dashboard, streaming, download, upload, delete
 │       └── views.py          # Dynamic template renderer
-├── certs/
-│   └── .gitkeep              # Mount point for TLS certificates
+├── certs/                    # Local mount point for TLS certificates (gitignored)
 ├── tests/
 │   ├── __init__.py           # Test package
 │   ├── conftest.py           # Test fixtures, test DB, synthetic MP3 generator

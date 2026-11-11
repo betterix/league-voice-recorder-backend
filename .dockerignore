@@ -1,8 +1,7 @@
 .git
 .venv
 data
-certs/*
-!certs/.gitkeep
+certs/
 __pycache__
 *.pyc
 .pytest_cache

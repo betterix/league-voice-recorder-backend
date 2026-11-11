@@ -1,6 +1,5 @@
 .env
-certs/*
-!certs/.gitkeep
+certs/
 
 data/
 __pycache__/
