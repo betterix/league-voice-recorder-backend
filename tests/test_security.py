@@ -10,6 +10,8 @@ from app.security import (
     Role,
     authenticate_key,
     generate_self_signed_cert,
+    is_scanner_probe,
+    is_trusted_ip,
     rate_limiter,
     validate_tls_certificates,
     verify_secret_constant_time,
@@ -345,3 +347,223 @@ async def test_lifespan_production_tls_success_and_failure(temp_workspace: dict[
     async with lifespan(app_valid):
         # Successfully started inside lifespan context
         assert True
+
+
+def test_is_trusted_ip():
+    """Verify trusted IP evaluation for loopback and configured management IPs."""
+    # Loopback defaults
+    assert is_trusted_ip("127.0.0.1", "") is True
+    assert is_trusted_ip("::1", "") is True
+    assert is_trusted_ip("localhost", "") is True
+    assert is_trusted_ip("testclient", "") is True
+
+    # Configured specific IP
+    assert is_trusted_ip("203.0.113.10", "203.0.113.10,192.168.1.0/24") is True
+    assert is_trusted_ip("203.0.113.99", "203.0.113.10,192.168.1.0/24") is False
+
+    # Subnet
+    assert is_trusted_ip("192.168.1.50", "203.0.113.10,192.168.1.0/24") is True
+    assert is_trusted_ip("192.168.2.50", "203.0.113.10,192.168.1.0/24") is False
+
+    # Wildcards do not grant trusted status from scanner protection
+    assert is_trusted_ip("198.51.100.1", "0.0.0.0") is False
+    assert is_trusted_ip("198.51.100.1", "*") is False
+
+
+def test_is_scanner_probe_detection():
+    """Verify scanner probe regex and suspicious method detection."""
+    from starlette.requests import Request
+
+    def _mock_request(method: str, path: str, query_string: bytes = b"") -> Request:
+        scope = {
+            "type": "http",
+            "method": method,
+            "path": path,
+            "query_string": query_string,
+            "headers": [],
+        }
+        return Request(scope)
+
+    # Obvious vulnerability / exploit probes
+    assert is_scanner_probe(_mock_request("GET", "/.env")) is True
+    assert is_scanner_probe(_mock_request("GET", "/.git/config")) is True
+    assert is_scanner_probe(_mock_request("GET", "/.DS_Store")) is True
+    assert is_scanner_probe(_mock_request("GET", "/.vscode/sftp.json")) is True
+    assert is_scanner_probe(_mock_request("GET", "/actuator/env")) is True
+    assert is_scanner_probe(_mock_request("GET", "/telescope/requests")) is True
+    assert is_scanner_probe(_mock_request("GET", "/trace.axd")) is True
+    assert is_scanner_probe(_mock_request("GET", "/info.php")) is True
+    assert is_scanner_probe(_mock_request("GET", "/console/")) is True
+    assert is_scanner_probe(_mock_request("GET", "/login.action")) is True
+    assert is_scanner_probe(_mock_request("GET", "/___proxy_subdomain_whm/login")) is True
+    assert is_scanner_probe(_mock_request("GET", "/___proxy_subdomain_cpanel")) is True
+    assert is_scanner_probe(_mock_request("GET", "/v2/_catalog")) is True
+    assert is_scanner_probe(_mock_request("POST", "/graphql")) is True
+    assert is_scanner_probe(_mock_request("POST", "/api/graphql")) is True
+    assert is_scanner_probe(_mock_request("POST", "/api/gql")) is True
+    assert is_scanner_probe(_mock_request("GET", "/", b"rest_route=/wp/v2/users/")) is True
+    assert is_scanner_probe(_mock_request("GET", "/debug/default/view", b"panel=config")) is True
+    assert is_scanner_probe(_mock_request("PROPFIND", "/")) is True
+
+    # Legitimate application routes
+    assert is_scanner_probe(_mock_request("GET", "/api/v1/health")) is False
+    assert is_scanner_probe(_mock_request("GET", "/api/v1/recordings")) is False
+    assert is_scanner_probe(_mock_request("GET", "/api/v1/recordings/8018190001")) is False
+    assert is_scanner_probe(_mock_request("GET", "/web")) is False
+    assert is_scanner_probe(_mock_request("GET", "/web/api/recordings")) is False
+    assert is_scanner_probe(_mock_request("GET", "/favicon.ico")) is False
+
+
+def test_instant_ip_ban_on_scanner_probe(test_settings: Settings):
+    """Verify an instant IP ban is enforced when an untrusted IP hits zero-tolerance probes."""
+    from starlette.testclient import TestClient as CustomClient
+
+    from app.main import create_app
+
+    app = create_app()
+    scanner_ip = "198.51.100.77"
+    client = CustomClient(app, client=(scanner_ip, 40000))
+
+    # Probe /.env -> instant ban
+    resp = client.get("/.env")
+    assert resp.status_code == 429
+    assert "Retry-After" in resp.headers
+    assert "scanner" in resp.json()["detail"].lower()
+
+    # Verify IP is tracked as blocked in rate limiter
+    is_blocked, remaining = rate_limiter.is_ip_blocked(scanner_ip)
+    assert is_blocked is True
+    assert remaining > 0
+
+    # Any subsequent request from this IP is now immediately rejected
+    subsequent = client.get("/api/v1/health", headers={"X-API-Key": TEST_PULL_KEY})
+    assert subsequent.status_code == 429
+    assert "temporarily blocked" in subsequent.json()["detail"].lower()
+
+
+def test_heuristic_scanner_threshold_ban(test_settings: Settings):
+    """Verify repeated 404/400 errors from an untrusted client trigger an automated IP ban."""
+    from starlette.testclient import TestClient as CustomClient
+
+    from app.main import create_app
+
+    app = create_app()
+    scanner_ip = "198.51.100.88"
+    client = CustomClient(app, client=(scanner_ip, 41000))
+
+    # Probe 4 non-existent paths -> should return 404 without ban yet (threshold is 5)
+    for i in range(4):
+        resp = client.get(f"/nonexistent-path-{i}")
+        assert resp.status_code == 404
+
+    is_blocked, _ = rate_limiter.is_ip_blocked(scanner_ip)
+    assert is_blocked is False
+
+    # 5th invalid request reaches threshold and triggers ban
+    resp_5 = client.get("/nonexistent-path-final")
+    assert resp_5.status_code == 429
+    assert "Retry-After" in resp_5.headers
+
+    # 6th request is blocked at middleware
+    resp_6 = client.get("/api/v1/health")
+    assert resp_6.status_code == 429
+
+
+def test_authenticated_404_does_not_trigger_scanner_ban(test_settings: Settings):
+    """Verify authenticated clients requesting non-existent recordings do not get banned."""
+    from starlette.testclient import TestClient as CustomClient
+
+    from app.main import create_app
+
+    app = create_app()
+    player_ip = "198.51.100.99"
+    client = CustomClient(app, client=(player_ip, 42000))
+
+    # Legitimate authenticated client requests a missing recording 6 times
+    for _ in range(6):
+        resp = client.get(
+            "/api/v1/recordings/9999999999",
+            headers={"X-API-Key": TEST_PULL_KEY},
+        )
+        assert resp.status_code == 404
+
+    # IP should NOT be blocked because it has valid authentication credentials
+    is_blocked, _ = rate_limiter.is_ip_blocked(player_ip)
+    assert is_blocked is False
+
+
+def test_trusted_ip_exempt_from_scanner_ban(test_settings: Settings):
+    """Verify configured WEB_ALLOWED_IPS and loopback addresses are never banned."""
+    from starlette.testclient import TestClient as CustomClient
+
+    from app.main import create_app
+
+    app = create_app()
+    # 203.0.113.10 is in test_settings.WEB_ALLOWED_IPS
+    trusted_ip = "203.0.113.10"
+    client = CustomClient(app, client=(trusted_ip, 43000))
+
+    # Request exploit probe
+    resp = client.get("/.env")
+    # Trusted IP is exempt from scanner ban; reaches handler / 404
+    assert resp.status_code == 404
+
+    is_blocked, _ = rate_limiter.is_ip_blocked(trusted_ip)
+    assert is_blocked is False
+
+
+def test_favicon_endpoint(client: TestClient):
+    """Verify /favicon.ico returns HTTP 204 No Content without 404 noise."""
+    resp = client.get("/favicon.ico")
+    assert resp.status_code == 204
+    assert len(resp.content) == 0
+
+
+def test_manual_ip_unblock_and_list():
+    """Verify manual IP blocking, retrieval, and unblocking."""
+    rate_limiter.reset()
+    test_ip = "198.51.100.123"
+
+    rate_limiter.block_ip(test_ip, duration_minutes=30, reason="Manual admin test ban")
+    is_blocked, remaining = rate_limiter.is_ip_blocked(test_ip)
+    assert is_blocked is True
+    assert remaining > 0
+
+    blocked_list = rate_limiter.get_blocked_ips()
+    assert test_ip in blocked_list
+    assert "Manual admin test ban" in blocked_list[test_ip]["reason"]
+
+    # Unblock
+    unblocked = rate_limiter.unblock_ip(test_ip)
+    assert unblocked is True
+    is_blocked_after, _ = rate_limiter.is_ip_blocked(test_ip)
+    assert is_blocked_after is False
+
+
+def test_web_security_blocked_ips_endpoints(client: TestClient):
+    """Verify web dashboard security management endpoints."""
+    import base64
+
+    from tests.conftest import TEST_WEB_PASS, TEST_WEB_USER
+
+    token = base64.b64encode(f"{TEST_WEB_USER}:{TEST_WEB_PASS}".encode()).decode()
+    auth = {"Authorization": f"Basic {token}"}
+
+    test_ip = "198.51.100.222"
+    rate_limiter.block_ip(test_ip, duration_minutes=15, reason="Scanner test")
+
+    # Get blocked list
+    resp = client.get("/web/api/security/blocked-ips", headers=auth)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "blocked_ips" in data
+    assert test_ip in data["blocked_ips"]
+
+    # Unblock IP via web API
+    del_resp = client.post(f"/web/api/security/unblock/{test_ip}", headers=auth)
+    assert del_resp.status_code == 200
+    assert del_resp.json()["unblocked"] is True
+
+    # Verify no longer blocked
+    is_blocked, _ = rate_limiter.is_ip_blocked(test_ip)
+    assert is_blocked is False

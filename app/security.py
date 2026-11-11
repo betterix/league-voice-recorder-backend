@@ -2,11 +2,12 @@
 
 import datetime
 import logging
+import re
 import secrets
 import threading
 import time
 from enum import StrEnum
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 from pathlib import Path
 
 from cryptography import x509
@@ -26,6 +27,48 @@ class Role(StrEnum):
     UPLOAD = "upload"
     PULL = "pull"
     ADMIN = "admin"
+
+
+# -----------------------------------------------------------------------------
+# Vulnerability Scanner & Exploit Probe Signatures
+# -----------------------------------------------------------------------------
+
+# Compiled regex for zero-tolerance vulnerability scanner and exploit probe patterns
+SCANNER_PROBE_REGEX = re.compile(
+    r"""(?xi)
+    # Sensitive dot files & hidden directories
+    (?:^|/)\.(?:env|git|svn|hg|bzr|vscode|idea|DS_Store|aws|ssh)(?:/|$|\.)
+    # Traversal sequences
+    |(?:\.\./|\.\.\\|%2e%2e%2f|%2e%2e/)
+    # Server-side script probes (PHP, ASP, JSP, WebForms, ColdFusion)
+    |\.(?:php|asp|aspx|jsp|jspx|cgi|pl|action|axd|do|cfm|properties)(?:/|$|\?|\#)
+    # WordPress & CMS reconnaissance
+    |/(?:wp-|wordpress|wp/|wp_admin|wp_content|xmlrpc\.php)
+    |rest_route=/wp/
+    # Common admin panels & proxy probes
+    |(?:phpmyadmin|pma|myadmin|adminer|cpanel|whm|webmail|roundcube|ecp|owa|autodiscover|proxy_subdomain)
+    # Spring Boot Actuator, Laravel Telescope, debug consoles, server-status
+    |/(?:actuator|telescope|debug/default/view|console(?:/|$)|server-status|server-info|elmah\.axd|trace\.axd)(?:/|$|\?)
+    # GraphQL probes (this backend is purely RESTful under /api/v1)
+    |/(?:graphql|gql|api/graphql|graphql/api|api/gql)(?:/|$|\?)
+    # Docker registry / exchange / maven / vite probes
+    |/(?:v1/_catalog|v2/_catalog|exporttool|META-INF|WEB-INF|%40vite|@vite)(?:/|$|\?)
+    # Config & sensitive files
+    |/(?:config\.json|\.well-known/security\.txt|sftp\.json)(?:/|$|\?)
+    """
+)
+
+SUSPICIOUS_METHODS = {
+    "PROPFIND",
+    "PROPPATCH",
+    "SEARCH",
+    "MKCOL",
+    "COPY",
+    "MOVE",
+    "LOCK",
+    "UNLOCK",
+    "CONNECT",
+}
 
 
 # -----------------------------------------------------------------------------
@@ -50,8 +93,12 @@ class InMemoryRateLimiter:
         self._upload_requests: dict[str, list[float]] = {}
         # client_ip -> list of failure timestamps
         self._auth_failures: dict[str, list[float]] = {}
+        # client_ip -> list of probe failure timestamps (float)
+        self._probe_failures: dict[str, list[float]] = {}
         # client_ip -> blocked_until timestamp (float)
         self._blocked_ips: dict[str, float] = {}
+        # client_ip -> reason for ban
+        self._blocked_reasons: dict[str, str] = {}
 
     def _cleanup_old_timestamps(
         self, timestamps: list[float], window_seconds: float
@@ -60,7 +107,7 @@ class InMemoryRateLimiter:
         return [ts for ts in timestamps if ts > threshold]
 
     def is_ip_blocked(self, ip: str) -> tuple[bool, int]:
-        """Check if an IP is currently blocked due to repeated auth failures.
+        """Check if an IP is currently blocked due to auth failures or scanner activity.
 
         Returns (is_blocked, remaining_seconds).
         """
@@ -74,7 +121,32 @@ class InMemoryRateLimiter:
                 else:
                     # Block expired
                     del self._blocked_ips[ip]
+                    self._blocked_reasons.pop(ip, None)
             return False, 0
+
+    def get_block_reason(self, ip: str) -> str:
+        """Return the reason an IP was blocked, or default description."""
+        with self._lock:
+            return self._blocked_reasons.get(ip, "Authentication brute-force or scanner activity")
+
+    def block_ip(
+        self,
+        ip: str,
+        duration_minutes: int,
+        reason: str = "Administrative or security block",
+    ) -> None:
+        """Explicitly and immediately ban an IP address for the specified duration."""
+        now = time.monotonic()
+        with self._lock:
+            blocked_until = now + (duration_minutes * 60.0)
+            self._blocked_ips[ip] = blocked_until
+            self._blocked_reasons[ip] = reason
+            logger.warning(
+                "🚨 IP %s BANNED for %d min: %s",
+                ip,
+                duration_minutes,
+                reason,
+            )
 
     def record_auth_failure(
         self,
@@ -97,6 +169,9 @@ class InMemoryRateLimiter:
             if len(failures) >= max_failures:
                 blocked_until = now + (block_duration_minutes * 60.0)
                 self._blocked_ips[ip] = blocked_until
+                self._blocked_reasons[ip] = (
+                    f"Authentication brute-force ({len(failures)} failed attempts)"
+                )
                 logger.warning(
                     "Brute-force protection: IP %s blocked for %d min (%d failed attempts)",
                     ip,
@@ -105,6 +180,68 @@ class InMemoryRateLimiter:
                 )
                 return True
             return False
+
+    def record_probe_failure(
+        self,
+        ip: str,
+        max_failures: int,
+        window_seconds: float = 60.0,
+        block_duration_minutes: int = 60,
+        reason: str = "Scanner probe threshold exceeded",
+    ) -> bool:
+        """Record a client probe failure (404/405/400).
+
+        Returns True if the IP is now blocked.
+        """
+        now = time.monotonic()
+        with self._lock:
+            failures = self._probe_failures.get(ip, [])
+            failures = self._cleanup_old_timestamps(failures, window_seconds)
+            failures.append(now)
+            self._probe_failures[ip] = failures
+
+            if len(failures) >= max_failures:
+                blocked_until = now + (block_duration_minutes * 60.0)
+                self._blocked_ips[ip] = blocked_until
+                self._blocked_reasons[ip] = reason
+                logger.warning(
+                    "🚨 Scanner protection: IP %s BANNED for %d min (%d probe attempts in %ds): %s",
+                    ip,
+                    block_duration_minutes,
+                    len(failures),
+                    int(window_seconds),
+                    reason,
+                )
+                return True
+            return False
+
+    def unblock_ip(self, ip: str) -> bool:
+        """Unblock an IP address. Returns True if IP was blocked."""
+        with self._lock:
+            removed = self._blocked_ips.pop(ip, None) is not None
+            self._blocked_reasons.pop(ip, None)
+            if removed:
+                logger.info("IP %s manually unblocked", ip)
+            return removed
+
+    def get_blocked_ips(self) -> dict[str, dict[str, any]]:
+        """Get snapshot of currently blocked IPs with remaining seconds and reason."""
+        now = time.monotonic()
+        result: dict[str, dict[str, any]] = {}
+        with self._lock:
+            expired = []
+            for ip, blocked_until in self._blocked_ips.items():
+                if now < blocked_until:
+                    result[ip] = {
+                        "remaining_seconds": int(blocked_until - now) + 1,
+                        "reason": self._blocked_reasons.get(ip, "Authentication or probe failure"),
+                    }
+                else:
+                    expired.append(ip)
+            for ip in expired:
+                del self._blocked_ips[ip]
+                self._blocked_reasons.pop(ip, None)
+        return result
 
     def check_rate_limit(
         self,
@@ -139,7 +276,9 @@ class InMemoryRateLimiter:
             self._general_requests.clear()
             self._upload_requests.clear()
             self._auth_failures.clear()
+            self._probe_failures.clear()
             self._blocked_ips.clear()
+            self._blocked_reasons.clear()
 
 
 # Global rate limiter instance
@@ -155,6 +294,57 @@ def get_client_ip(request: Request) -> str:
     if request.client and request.client.host:
         return request.client.host
     return "127.0.0.1"
+
+
+def is_trusted_ip(client_ip: str, allowed_ips_str: str = "") -> bool:
+    """Evaluate whether client_ip is a trusted IP exempt from probe and rate limits.
+
+    Localhost ('127.0.0.1', '::1', 'localhost', 'testclient') and explicitly
+    whitelisted management IPs in WEB_ALLOWED_IPS (excluding wildcards) are trusted.
+    """
+    if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+        return True
+
+    try:
+        addr = ip_address(client_ip)
+        if addr.is_loopback:
+            return True
+    except ValueError:
+        pass
+
+    if not allowed_ips_str:
+        return False
+
+    allowed_list = [ip.strip() for ip in allowed_ips_str.split(",") if ip.strip()]
+    for entry in allowed_list:
+        if entry in ("0.0.0.0", "*"):
+            continue
+        try:
+            if "/" in entry:
+                if ip_address(client_ip) in ip_network(entry, strict=False):
+                    return True
+            else:
+                if ip_address(client_ip) == ip_address(entry):
+                    return True
+        except ValueError:
+            if entry == client_ip:
+                return True
+
+    return False
+
+
+def is_scanner_probe(request: Request) -> bool:
+    """Detect if an incoming HTTP request matches scanner or exploit probe patterns."""
+    # 1. Suspicious probe methods (WebDAV, etc.)
+    if request.method.upper() in SUSPICIOUS_METHODS:
+        return True
+
+    # 2. Check full raw URL path and query string
+    path = request.url.path
+    query = request.url.query
+    full_target = f"{path}?{query}" if query else path
+
+    return bool(SCANNER_PROBE_REGEX.search(full_target))
 
 
 # -----------------------------------------------------------------------------

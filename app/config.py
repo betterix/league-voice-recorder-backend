@@ -99,6 +99,25 @@ class Settings(BaseSettings):
         ge=1,
         description="Duration in minutes of temporary IP block after auth failure threshold",
     )
+    SCANNER_BLOCK_ENABLED: bool = Field(
+        default=True,
+        description="Enable automatic IP blocking for vulnerability scanners and probe activity",
+    )
+    SCANNER_BLOCK_DURATION_MINUTES: int = Field(
+        default=60,
+        ge=1,
+        description="Duration in minutes to ban IPs flagged for scanning/probing",
+    )
+    SCANNER_FAILURE_THRESHOLD: int = Field(
+        default=5,
+        ge=1,
+        description="Number of consecutive probe/404/405/400 failures within window before IP ban",
+    )
+    SCANNER_FAILURE_WINDOW_SECONDS: float = Field(
+        default=60.0,
+        ge=1.0,
+        description="Sliding window in seconds for tracking probe failures",
+    )
 
     # Web Dashboard Configuration
     WEB_ENABLED: bool = Field(

@@ -10,7 +10,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from app import __version__
 from app.api.health import router as health_router
@@ -18,8 +18,11 @@ from app.api.recordings import router as recordings_router
 from app.config import get_settings
 from app.database import init_db
 from app.security import (
+    authenticate_key,
     generate_self_signed_cert,
     get_client_ip,
+    is_scanner_probe,
+    is_trusted_ip,
     rate_limiter,
     validate_tls_certificates,
 )
@@ -147,26 +150,47 @@ def create_app() -> FastAPI:
     ]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
-    # Global Rate Limiting & IP Blocking Middleware
+    # Global Rate Limiting, Vulnerability Scanner Protection & IP Blocking Middleware
     @app.middleware("http")
     async def security_and_rate_limit_middleware(request: Request, call_next):
         client_ip = get_client_ip(request)
 
-        # Check brute-force IP block
+        # 1. Check if IP is already blocked
         is_blocked, remaining = rate_limiter.is_ip_blocked(client_ip)
         if is_blocked:
+            reason = rate_limiter.get_block_reason(client_ip)
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
                     "detail": (
-                        "Too many failed authentication attempts. IP temporarily blocked. "
+                        f"IP address temporarily blocked ({reason}). "
                         f"Try again in {remaining} seconds."
                     )
                 },
                 headers={"Retry-After": str(remaining)},
             )
 
-        # General rate limit per minute
+        trusted = is_trusted_ip(client_ip, settings.WEB_ALLOWED_IPS)
+
+        # 2. Check for instant scanner / exploit probe (if enabled and not trusted)
+        if settings.SCANNER_BLOCK_ENABLED and not trusted and is_scanner_probe(request):
+            rate_limiter.block_ip(
+                ip=client_ip,
+                duration_minutes=settings.SCANNER_BLOCK_DURATION_MINUTES,
+                reason=f"Malicious scanner probe ({request.method} {request.url.path})",
+            )
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={
+                    "detail": (
+                        "Malicious scanner probe detected. IP temporarily blocked. "
+                        f"Try again in {settings.SCANNER_BLOCK_DURATION_MINUTES * 60} seconds."
+                    )
+                },
+                headers={"Retry-After": str(settings.SCANNER_BLOCK_DURATION_MINUTES * 60)},
+            )
+
+        # 3. General rate limit per minute
         allowed, remaining_quota, retry_after = rate_limiter.check_rate_limit(
             ip=client_ip,
             category="general",
@@ -185,6 +209,46 @@ def create_app() -> FastAPI:
 
         response = await call_next(request)
 
+        # 4. Probe / Client error threshold check for unauthenticated & untrusted requests
+        if (
+            settings.SCANNER_BLOCK_ENABLED
+            and not trusted
+            and response.status_code
+            in (
+                status.HTTP_404_NOT_FOUND,
+                status.HTTP_405_METHOD_NOT_ALLOWED,
+                status.HTTP_400_BAD_REQUEST,
+            )
+        ):
+            # Check if request had a valid API key
+            has_valid_api_key = False
+            x_api_key = request.headers.get("X-API-Key")
+            if x_api_key:
+                has_valid_api_key = authenticate_key(x_api_key, settings) is not None
+
+            if not has_valid_api_key:
+                win_sec = int(settings.SCANNER_FAILURE_WINDOW_SECONDS)
+                thresh = settings.SCANNER_FAILURE_THRESHOLD
+                blocked = rate_limiter.record_probe_failure(
+                    ip=client_ip,
+                    max_failures=thresh,
+                    window_seconds=settings.SCANNER_FAILURE_WINDOW_SECONDS,
+                    block_duration_minutes=settings.SCANNER_BLOCK_DURATION_MINUTES,
+                    reason=f"Scanner probe threshold ({thresh} errors in {win_sec}s)",
+                )
+                if blocked:
+                    ban_mins = settings.SCANNER_BLOCK_DURATION_MINUTES
+                    return JSONResponse(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        content={
+                            "detail": (
+                                "Too many invalid requests. Scanner activity detected. "
+                                f"IP temporarily blocked for {ban_mins} minutes."
+                            )
+                        },
+                        headers={"Retry-After": str(ban_mins * 60)},
+                    )
+
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -192,6 +256,11 @@ def create_app() -> FastAPI:
         response.headers["X-RateLimit-Remaining"] = str(remaining_quota)
 
         return response
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon_endpoint():
+        """Lightweight endpoint returning 204 No Content to satisfy browser icon requests."""
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     # Include versioned API routers
     app.include_router(health_router, prefix="/api/v1")

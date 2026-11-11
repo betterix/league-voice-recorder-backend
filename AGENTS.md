@@ -35,6 +35,7 @@ All authenticated endpoints require the `X-API-Key` HTTP header:
 - `ADMIN_KEY`: Master administrative key granting full read, write, delete, and telemetry access.
 - **Constant-Time Verification**: All secret comparisons use `secrets.compare_digest()` to eliminate timing attacks.
 - **Brute-Force IP Protection**: 5 failed authentication attempts from any IP within 60 seconds trigger a temporary 10-minute block across all endpoints (`429 Too Many Requests`).
+- **Automated Scanner & Exploit Probe Defense**: Zero-tolerance signature detection (`/.env`, `/.git`, `/actuator`, `/console`, `PROPFIND`, etc.) triggers an instant 60-minute IP ban. Heuristic probe defense tracks unauthenticated client errors (404/405/400) and automatically bans scanning IPs upon reaching threshold (5 attempts in 60s). Configured `WEB_ALLOWED_IPS` management hosts and loopback addresses are exempt.
 
 ### 2.4 Hardened SQLite WAL Storage
 - SQLite configured with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`), `synchronous=NORMAL;`, and 30-second busy timeout for safe concurrent reads and writes.

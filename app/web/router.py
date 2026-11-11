@@ -22,7 +22,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import Recording
 from app.schemas import MessageResponse, RecordingMetadata
-from app.security import get_client_ip
+from app.security import get_client_ip, rate_limiter
 from app.storage import (
     create_download_response,
     delete_recording_file,
@@ -70,12 +70,37 @@ def get_web_recordings(
     except Exception:
         pass
 
+    blocked_ips = rate_limiter.get_blocked_ips()
+
     return {
         "items": items,
         "total": len(items),
         "storage_total_bytes": total_b,
         "storage_used_bytes": used_b,
         "storage_free_bytes": free_b,
+        "blocked_ips_count": len(blocked_ips),
+    }
+
+
+@router.get("/api/security/blocked-ips", summary="List actively banned scanner IPs")
+def get_blocked_ips(
+    username: str = Depends(require_web_access),
+) -> dict:
+    """Return actively banned IP addresses and remaining ban durations."""
+    return {"blocked_ips": rate_limiter.get_blocked_ips()}
+
+
+@router.post("/api/security/unblock/{ip}", summary="Unban an IP address")
+def unblock_banned_ip(
+    ip: str,
+    username: str = Depends(require_web_access),
+) -> dict:
+    """Unblock an IP address from brute-force or scanner protection."""
+    unblocked = rate_limiter.unblock_ip(ip)
+    return {
+        "ip": ip,
+        "unblocked": unblocked,
+        "message": f"IP {ip} unblocked" if unblocked else f"IP {ip} was not blocked",
     }
 
 

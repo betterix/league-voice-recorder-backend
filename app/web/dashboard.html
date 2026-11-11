@@ -547,6 +547,11 @@
         <div class="stat-value" id="stat-storage">--</div>
         <div class="stat-meta" id="stat-free">Checking disk capacity...</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Scanner Bans</div>
+        <div class="stat-value" id="stat-banned-ips">0</div>
+        <div class="stat-meta" id="stat-defense-status">Automated IP defense active</div>
+      </div>
     </div>
 
     <!-- Toolbar -->
@@ -720,6 +725,11 @@
       
       let totalSec = (data.items || []).reduce((acc, r) => acc + (r.duration || 0), 0);
       document.getElementById('stat-duration').textContent = formatDuration(totalSec);
+
+      if (data.blocked_ips_count !== undefined) {
+        document.getElementById('stat-banned-ips').textContent = data.blocked_ips_count;
+        document.getElementById('stat-defense-status').textContent = data.blocked_ips_count > 0 ? `${data.blocked_ips_count} malicious IPs blocked` : 'Automated IP defense active';
+      }
 
       if (data.storage_used_bytes !== undefined) {
         document.getElementById('stat-storage').textContent = formatBytes(data.storage_used_bytes);
