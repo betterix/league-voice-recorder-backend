@@ -39,7 +39,7 @@ RUN apk update && apk upgrade --no-cache && \
     curl \
     ca-certificates
 
-RUN rm -rf /usr/local/lib/python3.14/site-packages/*
+RUN rm -rf /usr/local/lib/python*/site-packages/*
 
 # Create secure non-root system user and group
 RUN addgroup -g 10001 -S appuser && \
