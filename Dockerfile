@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Build & Compilation Stage
 # =============================================================================
-FROM python:3.14-alpine AS builder
+FROM python:3.15-alpine AS builder
 
 WORKDIR /build
 
@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # =============================================================================
 # Stage 2: Hardened Minimal Production Runtime
 # =============================================================================
-FROM python:3.14-alpine
+FROM python:3.15-alpine
 
 # Metadata labels
 LABEL org.opencontainers.image.title="League Voice Recorder Backend" \
