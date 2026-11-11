@@ -314,9 +314,42 @@ Remove a recording file from disk and purge its metadata from the database. Stri
 
 ---
 
-## 7. 🛡️ Security, Rate Limiting & Host Protection
+## 7. 🖥️ Web Management Dashboard (`/web`)
 
-### 7.1 In-Memory Rate Limiting Scope
+The backend includes a modern, zero-dependency, self-contained web administration and review interface accessible at:
+
+```
+https://<YOUR_DOMAIN>:8443/web
+```
+
+### 7.1 Features
+- **Visual Scrim Explorer**: Browse all uploaded recordings with Game ID, Team Tag, date, duration, bitrate, and size.
+- **In-Browser Audio Player**: Stream recordings directly in the browser with seeking (`206 Partial Content`) and variable playback speed (`1.0x` to `2.0x`).
+- **Instant Search & Filter**: Real-time filtering by Game ID, Team Tag, or match notes without page reloading.
+- **Direct Download & Upload**: Download `.mp3` files with one click or manually upload recordings through a simple drag-and-drop modal.
+- **Storage Telemetry**: Real-time disk capacity monitoring and active TLS 1.3 indicator.
+- **Zero External Dependencies**: Pure embedded HTML/CSS/JS without external CDN or font tracking calls.
+
+### 7.2 Security, Cloaking & IP Whitelist Configuration
+Access to `/web` and the root endpoint `/` is guarded by two layers of defense:
+
+1. **IP Whitelist & Complete Cloaking (`WEB_ALLOWED_IPS`)**:
+   - **Specific Public IP (Recommended)**: Set `WEB_ALLOWED_IPS=203.0.113.50` (or comma-separated IPs/CIDRs) so only permitted IP addresses can reach the interface.
+   - **Full Stealth Cloaking (`404 Not Found`)**: Any unauthorized IP visiting `/` or `/web` receives a standard `404 Not Found` (`{"detail": "Not Found"}`) without `WWW-Authenticate` headers or any clues that the dashboard exists.
+   - **Root URL Redirect**: Allowed IPs visiting `/` are automatically redirected (`307`) to `/web`.
+   - **Unrestricted Public Access**: Set `WEB_ALLOWED_IPS=0.0.0.0` to permit connections from any IP (protected by HTTP Basic Auth credentials). Note: While convenient, restricting to your specific IP is significantly more secure.
+   - **Localhost Default**: `127.0.0.1`, `::1`, and Docker bridge subnets are always permitted by default for local testing and container health checks.
+
+2. **HTTP Basic Authentication**:
+   - `WEB_USERNAME`: Administrative username (default: `admin`).
+   - `WEB_PASSWORD`: Strong password configured in `.env` (minimum 16 characters required in production).
+   - Failed authentication attempts increment the IP brute-force rate limiter, triggering a 10-minute ban if the threshold is exceeded.
+
+---
+
+## 8. 🛡️ Security, Rate Limiting & Host Protection
+
+### 8.1 In-Memory Rate Limiting Scope
 The backend incorporates a thread-safe sliding-window rate limiter tailored for direct-port single-process Uvicorn deployment:
 
 | Category | Default Limit | Action on Exceeding |
@@ -328,7 +361,7 @@ The backend incorporates a thread-safe sliding-window rate limiter tailored for 
 > [!NOTE]
 > The rate limiter operates purely in memory within the container process, eliminating external Redis dependencies. In direct-port architecture, client IPs are obtained directly from the TCP socket connection (`request.client.host`). Spoofed `X-Forwarded-For` headers are strictly ignored.
 
-### 7.2 HTTP Host Protection
+### 8.2 HTTP Host Protection
 FastAPI `TrustedHostMiddleware` is configured to only allow requests matching:
 - The configured `DOMAIN_NAME` (e.g. `voice.example.com`)
 - Subdomains (`*.example.com`)
@@ -338,11 +371,11 @@ Any HTTP request with an unauthorized `Host` header is immediately rejected with
 
 ---
 
-## 8. 🌐 DNS & Direct-Port Network Architecture
+## 9. 🌐 DNS & Direct-Port Network Architecture
 
 The service exposes its HTTPS listener directly over port `8443` without intermediate proxies or CDN buffering to prevent upload truncation and latency on large audio files.
 
-### 8.1 DNS Record Setup
+### 9.1 DNS Record Setup
 In your DNS provider, configure a direct A-record pointing to your VPS public IPv4 address:
 
 | Type | Name | Content / Target | Proxy Status | TTL |
@@ -354,7 +387,7 @@ In your DNS provider, configure a direct A-record pointing to your VPS public IP
 
 ---
 
-## 9. 🔒 TLS 1.3 Certificate Setup & Management
+## 10. 🔒 TLS 1.3 Certificate Setup & Management
 
 The backend enforces native TLS 1.3 encryption directly in the Uvicorn listener. You can use either **Self-Signed Certificates** (for development / private scrim servers) or **Let's Encrypt** (for publicly trusted production deployments).
 
@@ -504,7 +537,7 @@ sudo certbot renew --dry-run
 
 ---
 
-## 10. 🛡️ Host Firewall Configuration (UFW)
+## 11. 🛡️ Host Firewall Configuration (UFW)
 
 Secure your VPS using `ufw`:
 
@@ -525,7 +558,7 @@ sudo ufw status verbose
 
 ---
 
-## 11. 🚀 Production Deployment Guide
+## 12. 🚀 Production Deployment Guide
 
 ### Step 1: Clone Repository & Create Data Directories
 
@@ -612,7 +645,7 @@ Expected output confirms:
 
 ---
 
-## 12. 🔄 Maintenance & Updates
+## 13. 🔄 Maintenance & Updates
 
 ### Updating Application Code
 
@@ -660,7 +693,7 @@ tar -czvf /home/ubuntu/backup_scrims_$(date +%Y%m%d).tar.gz \
 
 ---
 
-## 13. 🧪 Testing & Verification
+## 14. 🧪 Testing & Verification
 
 The repository contains an automated test suite executed with `pytest` and `coverage`:
 

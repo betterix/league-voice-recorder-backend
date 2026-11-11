@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>League Voice Recorder &bull; Scrim Dashboard</title>
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --card-hover: #182235;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --accent: #06b6d4;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --badge-bg: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text);
+      line-height: 1.5;
+      padding-bottom: 120px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 28px;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      background-color: var(--badge-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+
+    .badge-live {
+      color: var(--primary);
+      border-color: rgba(16, 185, 129, 0.3);
+      background-color: rgba(16, 185, 129, 0.1);
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      box-shadow: 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(16, 185, 129, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .stat-meta {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    /* Control Toolbar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+      max-width: 480px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 14px 10px 38px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 16px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #052e16;
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--card-bg);
+      border-color: var(--card-border);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background-color: var(--card-hover);
+      border-color: var(--text-muted);
+    }
+
+    .btn-danger {
+      background-color: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+    .btn-danger:hover {
+      background-color: var(--danger);
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    /* Table */
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      overflow-x: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    thead th {
+      padding: 14px 18px;
+      background: rgba(17, 24, 39, 0.8);
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--card-border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--card-border);
+      transition: background-color 0.15s;
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: var(--card-hover);
+    }
+
+    tbody td {
+      padding: 16px 18px;
+      font-size: 14px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .game-id-cell {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .team-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 64px 20px;
+      color: var(--text-dim);
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.6;
+    }
+
+    /* Fixed Audio Player Bar */
+    .player-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--card-border);
+      padding: 14px 24px;
+      display: none;
+      align-items: center;
+      gap: 20px;
+      z-index: 100;
+      box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .player-bar.active {
+      display: flex;
+    }
+
+    .player-info {
+      min-width: 180px;
+    }
+
+    .player-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .player-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .player-controls {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    audio {
+      width: 100%;
+      height: 38px;
+      outline: none;
+    }
+
+    .speed-btn {
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: var(--badge-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .speed-btn.active {
+      background: var(--primary);
+      color: #052e16;
+      border-color: var(--primary);
+    }
+
+    /* Upload Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-dark);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+    }
+
+    .file-dropzone {
+      border: 2px dashed var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .file-dropzone:hover {
+      border-color: var(--primary);
+      background-color: rgba(16, 185, 129, 0.05);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-group">
+        <div class="logo-icon">&#127911;</div>
+        <div>
+          <div class="brand-title">LEAGUE VOICE RECORDER</div>
+          <div class="brand-sub">Direct-Port Scrim Audio Management</div>
+        </div>
+      </div>
+
+      <div class="header-badges">
+        <div class="badge badge-live">
+          <div class="pulse"></div>
+          <span>TLS 1.3 Active</span>
+        </div>
+        <div class="badge">
+          <span>&#127760;</span>
+          <span id="badge-ip">IP: __CLIENT_IP__</span>
+        </div>
+        <div class="badge">
+          <span>&#128100;</span>
+          <span>User: __USERNAME__</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats Row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Recordings</div>
+        <div class="stat-value" id="stat-total">--</div>
+        <div class="stat-meta">Indexed scrimmage games</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Recorded Time</div>
+        <div class="stat-value" id="stat-duration">--</div>
+        <div class="stat-meta">Accumulated audio duration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Disk Storage Used</div>
+        <div class="stat-value" id="stat-storage">--</div>
+        <div class="stat-meta" id="stat-free">Checking disk capacity...</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">&#128269;</span>
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="Filter by Game ID, Team Tag, or Notes..."
+          oninput="handleSearch(this.value)"
+        >
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="loadRecordings()">
+          &#8635; Refresh
+        </button>
+        <button class="btn btn-primary" onclick="openUploadModal()">
+          &#8679; Upload Scrim MP3
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Game ID</th>
+            <th>Team</th>
+            <th>Recorded Date</th>
+            <th>Duration</th>
+            <th>Quality</th>
+            <th>Size</th>
+            <th>Notes</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="recordings-body">
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="empty-icon">&#8987;</div>
+                <div>Loading scrimmage recordings...</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Persistent Player Bar -->
+  <div class="player-bar" id="player-bar">
+    <div class="player-info">
+      <div class="player-title" id="player-track">Game --</div>
+      <div class="player-sub" id="player-team">Team --</div>
+    </div>
+    <div class="player-controls">
+      <audio id="audio-player" controls preload="metadata"></audio>
+      <div style="display: flex; gap: 4px;">
+        <button class="speed-btn active" onclick="setSpeed(1.0, this)">1.0x</button>
+        <button class="speed-btn" onclick="setSpeed(1.25, this)">1.25x</button>
+        <button class="speed-btn" onclick="setSpeed(1.5, this)">1.5x</button>
+        <button class="speed-btn" onclick="setSpeed(2.0, this)">2.0x</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="modal-overlay" id="upload-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Upload Scrim Audio</div>
+        <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+      </div>
+      <form id="upload-form" onsubmit="handleUpload(event)">
+        <div class="form-group">
+          <label class="form-label">Game ID *</label>
+          <input type="text" id="upload-game-id" class="form-control" placeholder="e.g. 8018190134" required pattern="^[a-zA-Z0-9_-]{1,64}$">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Team Tag (Optional)</label>
+          <input type="text" id="upload-team-tag" class="form-control" placeholder="e.g. T1, FNC, GEN" maxlength="16">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Scrim Notes (Optional)</label>
+          <input type="text" id="upload-notes" class="form-control" placeholder="e.g. Scrim Game 2 vs Academy" maxlength="255">
+        </div>
+        <div class="form-group">
+          <label class="form-label">MP3 File *</label>
+          <div class="file-dropzone" onclick="document.getElementById('upload-file').click()">
+            <input type="file" id="upload-file" accept="audio/mpeg,.mp3" style="display: none;" onchange="updateFileLabel(this)" required>
+            <div id="dropzone-text">&#128194; Click to select .mp3 file</div>
+          </div>
+        </div>
+        <div id="upload-status" style="font-size: 13px; margin-top: 10px; display: none;"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="upload-submit-btn">Upload Recording</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allRecordings = [];
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function formatDuration(sec) {
+      if (!sec) return '00:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      const h = Math.floor(m / 60);
+      if (h > 0) {
+        return h + 'h ' + (m % 60) + 'm ' + (s < 10 ? '0' : '') + s + 's';
+      }
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '--';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadRecordings() {
+      try {
+        const res = await fetch('/web/api/recordings');
+        if (!res.ok) throw new Error('Failed to fetch recordings');
+        const data = await res.json();
+        allRecordings = data.items || [];
+        updateStats(data);
+        renderTable(allRecordings);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('recordings-body').innerHTML = `
+          <tr>
+            <td colspan="8">
+              <div class="empty-state" style="color: var(--danger);">
+                <div class="empty-icon">&#9888;</div>
+                <div>Failed to load recordings: ${escapeHtml(err.message)}</div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function updateStats(data) {
+      document.getElementById('stat-total').textContent = data.total || 0;
+      
+      let totalSec = (data.items || []).reduce((acc, r) => acc + (r.duration || 0), 0);
+      document.getElementById('stat-duration').textContent = formatDuration(totalSec);
+
+      if (data.storage_used_bytes !== undefined) {
+        document.getElementById('stat-storage').textContent = formatBytes(data.storage_used_bytes);
+        document.getElementById('stat-free').textContent = formatBytes(data.storage_free_bytes) + ' free capacity';
+      } else {
+        const totalBytes = (data.items || []).reduce((acc, r) => acc + (r.file_size || 0), 0);
+        document.getElementById('stat-storage').textContent = formatBytes(totalBytes);
+      }
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('recordings-body');
+      if (items.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="empty-icon">&#127911;</div>
+                <div style="font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px;">No Scrim Recordings Found</div>
+                <div>Audio streams uploaded by recording clients will appear here automatically.</div>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = items.map(r => {
+        const safeId = escapeHtml(r.game_id);
+        const safeTag = escapeHtml(r.team_tag);
+        const safeNotes = escapeHtml(r.notes);
+        return `
+        <tr>
+          <td>
+            <div class="game-id-cell">
+              <span>${safeId}</span>
+            </div>
+          </td>
+          <td>
+            ${safeTag ? `<span class="team-badge">${safeTag}</span>` : '<span style="color: var(--text-dim);">--</span>'}
+          </td>
+          <td>${formatDate(r.upload_timestamp)}</td>
+          <td>${formatDuration(r.duration)}</td>
+          <td style="color: var(--text-muted); font-size: 13px;">
+            ${r.bitrate ? Math.round(r.bitrate / 1000) + ' kbps' : '--'} / ${r.sample_rate ? (r.sample_rate / 1000) + ' kHz' : '--'}
+          </td>
+          <td>${formatBytes(r.file_size)}</td>
+          <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);" title="${safeNotes}">
+            ${safeNotes || '<span style="color: var(--text-dim);">--</span>'}
+          </td>
+          <td style="text-align: right;">
+            <div class="action-group" style="justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm" onclick="playAudio('${encodeURIComponent(r.game_id)}', '${encodeURIComponent(r.team_tag || '')}')" title="Play recording directly in browser">
+                &#9654; Play
+              </button>
+              <a href="/web/download/${encodeURIComponent(r.game_id)}" class="btn btn-secondary btn-sm" download title="Download MP3 file">
+                &#128190; Download
+              </a>
+              <button class="btn btn-danger btn-sm" onclick="deleteRecording('${encodeURIComponent(r.game_id)}')" title="Delete recording permanently">
+                &#128465;
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      }).join('');
+    }
+
+    function handleSearch(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderTable(allRecordings);
+        return;
+      }
+      const filtered = allRecordings.filter(r => 
+        (r.game_id && r.game_id.toLowerCase().includes(q)) ||
+        (r.team_tag && r.team_tag.toLowerCase().includes(q)) ||
+        (r.notes && r.notes.toLowerCase().includes(q))
+      );
+      renderTable(filtered);
+    }
+
+    function playAudio(gameId, teamTag) {
+      const bar = document.getElementById('player-bar');
+      const audio = document.getElementById('audio-player');
+      document.getElementById('player-track').textContent = 'Game ID: ' + gameId;
+      document.getElementById('player-team').textContent = teamTag ? 'Team: ' + teamTag : 'Direct Scrim Recording';
+      
+      bar.classList.add('active');
+      audio.src = `/web/stream/${gameId}`;
+      audio.play().catch(e => console.log('Autoplay prevented:', e));
+    }
+
+    function setSpeed(speed, btn) {
+      const audio = document.getElementById('audio-player');
+      audio.playbackRate = speed;
+      document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    async function deleteRecording(gameId) {
+      if (!confirm(`Are you sure you want to permanently delete recording '${gameId}'? This cannot be undone.`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/web/recordings/${gameId}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Delete failed');
+        }
+        await loadRecordings();
+      } catch (err) {
+        alert('Failed to delete recording: ' + err.message);
+      }
+    }
+
+    /* Modal */
+    function openUploadModal() {
+      document.getElementById('upload-modal').classList.add('active');
+      document.getElementById('upload-status').style.display = 'none';
+      document.getElementById('upload-form').reset();
+      document.getElementById('dropzone-text').innerHTML = '&#128194; Click to select .mp3 file';
+    }
+
+    function closeUploadModal() {
+      document.getElementById('upload-modal').classList.remove('active');
+    }
+
+    function updateFileLabel(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById('dropzone-text').textContent = 'Selected: ' + input.files[0].name + ' (' + formatBytes(input.files[0].size) + ')';
+      }
+    }
+
+    async function handleUpload(e) {
+      e.preventDefault();
+      const gameId = document.getElementById('upload-game-id').value.trim();
+      const teamTag = document.getElementById('upload-team-tag').value.trim();
+      const notes = document.getElementById('upload-notes').value.trim();
+      const fileInput = document.getElementById('upload-file');
+      const statusDiv = document.getElementById('upload-status');
+      const submitBtn = document.getElementById('upload-submit-btn');
+
+      if (!fileInput.files || !fileInput.files[0]) {
+        alert('Please choose an MP3 file to upload.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      if (teamTag) formData.append('team_tag', teamTag);
+      if (notes) formData.append('notes', notes);
+
+      statusDiv.style.display = 'block';
+      statusDiv.style.color = 'var(--text-muted)';
+      statusDiv.textContent = 'Uploading scrimmage audio...';
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/web/upload/${gameId}`, {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Upload failed');
+        }
+        statusDiv.style.color = 'var(--primary)';
+        statusDiv.textContent = 'Upload successful!';
+        setTimeout(() => {
+          closeUploadModal();
+          loadRecordings();
+        }, 800);
+      } catch (err) {
+        statusDiv.style.color = 'var(--danger)';
+        statusDiv.textContent = 'Upload error: ' + err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Initialize on page load
+    loadRecordings();
+  </script>
+</body>
+</html>

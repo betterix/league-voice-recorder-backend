@@ -25,6 +25,8 @@ from app.security import rate_limiter
 TEST_UPLOAD_KEY = "test-upload-key-secure-random-123456"
 TEST_PULL_KEY = "test-pull-key-secure-random-654321"
 TEST_ADMIN_KEY = "test-admin-key-secure-random-789012"
+TEST_WEB_USER = "admin"
+TEST_WEB_PASS = "test-secure-web-password-999"
 
 
 def generate_valid_mp3_bytes(num_frames: int = 15) -> bytes:
@@ -88,6 +90,10 @@ def test_settings(temp_workspace: dict[str, Path]) -> Settings:
         UPLOAD_RATE_LIMIT_PER_MINUTE=50,
         AUTH_FAILURE_LIMIT_PER_MINUTE=5,
         AUTH_BLOCK_DURATION_MINUTES=5,
+        WEB_ENABLED=True,
+        WEB_ALLOWED_IPS="127.0.0.1,::1,testclient,203.0.113.10",
+        WEB_USERNAME=TEST_WEB_USER,
+        WEB_PASSWORD=TEST_WEB_PASS,
     )
     set_settings(settings)
     return settings

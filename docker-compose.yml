@@ -1,9 +1,7 @@
 services:
   league-scrim-backend:
     container_name: league-scrim-backend
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: league-scrim-backend:dev
     restart: unless-stopped
     ports:
       - "${PORT:-8443}:${PORT:-8443}"

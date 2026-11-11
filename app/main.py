@@ -8,9 +8,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app import __version__
 from app.api.health import router as health_router
@@ -196,6 +196,26 @@ def create_app() -> FastAPI:
     # Include versioned API routers
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(recordings_router, prefix="/api/v1")
+
+    # Include Web Dashboard router if enabled
+    if settings.WEB_ENABLED:
+        from app.web.router import router as web_router
+
+        app.include_router(web_router, prefix="/web")
+
+    @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+    def root_endpoint(request: Request):
+        """Root endpoint redirecting allowed web users to /web or cloaking with 404."""
+        if settings.WEB_ENABLED:
+            from app.web.auth import is_web_ip_allowed
+
+            client_ip = get_client_ip(request)
+            if is_web_ip_allowed(client_ip, settings.WEB_ALLOWED_IPS):
+                return RedirectResponse(
+                    url="/web",
+                    status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+                )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
     return app
 

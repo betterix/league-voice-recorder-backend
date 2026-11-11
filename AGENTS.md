@@ -18,9 +18,9 @@ It enables competitive esports teams, players, coaches, and analysts to:
 
 ## 2. 🧭 Core Architecture & Design Principles
 
-### 2.1 Pure Headless API
-- **No Web UI / Frontend**: No HTML templates, Jinja2, static assets, or browser admin interfaces.
-- **RESTful JSON**: All API operations are versioned under `/api/v1` and strictly serialized via Pydantic schemas.
+### 2.1 Pure Headless Core API & Optional Cloaked Web Dashboard
+- **RESTful Headless API**: All core recording and sync API operations are versioned under `/api/v1` and strictly serialized via Pydantic schemas.
+- **Optional Cloaked Web Dashboard**: Zero-dependency embedded web interface at `/web` for browser review, playback, and manual uploads. Access is strictly IP-whitelisted and HTTP Basic Auth protected, returning `404 Not Found` for unauthorized IPs to cloak the endpoint from network scanners.
 
 ### 2.2 Direct-Port Ingress (Native TLS 1.3)
 - **Direct Internet Exposure**: Runs on direct port `8443` (TCP) over HTTPS.
@@ -55,10 +55,16 @@ league-voice-recorder-backend/
 │   ├── schemas.py            # Pydantic request & response schemas
 │   ├── storage.py            # MP3 chunked upload/streaming, Mutagen parsing, range requests
 │   ├── main.py               # FastAPI application factory, middleware, TLS listener
-│   └── api/
-│       ├── __init__.py       # Router namespace
-│       ├── health.py         # Authenticated health & storage diagnostics
-│       └── recordings.py     # Endpoints: upload, list, get, download, delete
+│   ├── api/
+│   │   ├── __init__.py       # Router namespace
+│   │   ├── health.py         # Authenticated health & storage diagnostics
+│   │   └── recordings.py     # Endpoints: upload, list, get, download, delete
+│   └── web/
+│       ├── __init__.py       # Web package namespace
+│       ├── auth.py           # IP whitelisting & Basic Auth dependency
+│       ├── dashboard.html    # Zero-dependency modern dark UI
+│       ├── router.py         # Web dashboard, streaming, download, upload, delete
+│       └── views.py          # Dynamic template renderer
 ├── certs/
 │   └── .gitkeep              # Mount point for TLS certificates
 ├── tests/
@@ -67,7 +73,8 @@ league-voice-recorder-backend/
 │   ├── test_security.py      # Auth, brute-force IP blocking, rate limits, TLS tests
 │   ├── test_upload.py        # Streaming upload, Mutagen validation, checksum tests
 │   ├── test_download.py      # Resumable range requests, partial content tests
-│   └── test_api.py           # Health, query, search, and delete tests
+│   ├── test_api.py           # Health, query, search, and delete tests
+│   └── test_web.py           # Web dashboard, IP whitelist, basic auth tests
 ├── .dockerignore             # Excludes .venv, data, certs from Docker build context
 ├── .env.example              # Clean configuration template with generic placeholders
 ├── .gitignore                # Excludes secrets, certificates, data, and cache
@@ -166,7 +173,7 @@ uv run ruff format .
 
 When modifying or extending this service:
 
-1. **Maintain Headless Architecture**: Never introduce frontend templates, HTML views, static directories, or browser panels.
+1. **Maintain Secure Architecture**: Core audio APIs under `/api/v1` remain strictly headless RESTful JSON. The optional `/web` dashboard remains zero-dependency embedded without external CDN links or tracking scripts.
 2. **Preserve Direct-Port Native TLS**: Do not alter Uvicorn TLS 1.3 configuration to require an external reverse proxy.
 3. **Constant-Time Comparison**: Always use `secrets.compare_digest()` for any secret or token evaluation.
 4. **Bounded Memory Operations**: Never read entire audio files into memory (`file.read()` all at once). Always stream in chunks (`CHUNK_SIZE = 64 * 1024`).

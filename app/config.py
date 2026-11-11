@@ -100,6 +100,24 @@ class Settings(BaseSettings):
         description="Duration in minutes of temporary IP block after auth failure threshold",
     )
 
+    # Web Dashboard Configuration
+    WEB_ENABLED: bool = Field(
+        default=True,
+        description="Enable or disable the /web administration and monitoring interface",
+    )
+    WEB_ALLOWED_IPS: str = Field(
+        default="127.0.0.1,::1",
+        description="Comma-separated list of allowed IPs for /web (0.0.0.0 for public access)",
+    )
+    WEB_USERNAME: str = Field(
+        default="admin",
+        description="HTTP Basic Auth username for /web dashboard",
+    )
+    WEB_PASSWORD: str = Field(
+        default="change-me-secure-web-password",
+        description="HTTP Basic Auth password for /web dashboard",
+    )
+
     @field_validator("STORAGE_DIR", "DB_DIR", "SSL_CERT", "SSL_KEY", mode="after")
     @classmethod
     def resolve_paths(cls, value: Path) -> Path:
@@ -166,6 +184,19 @@ class Settings(BaseSettings):
 
             if self.ADMIN_KEY and self.ADMIN_KEY in (self.UPLOAD_KEY, self.PULL_KEY):
                 raise ValueError("ADMIN_KEY must not be identical to UPLOAD_KEY or PULL_KEY.")
+
+            # Validate web dashboard credentials if enabled
+            if self.WEB_ENABLED:
+                lowered_web_pass = self.WEB_PASSWORD.lower()
+                if any(substr in lowered_web_pass for substr in INSECURE_KEY_SUBSTRINGS):
+                    raise ValueError(
+                        "Insecure production credential detected for WEB_PASSWORD. "
+                        "Must generate a strong random password in .env."
+                    )
+                if len(self.WEB_PASSWORD) < 16:
+                    raise ValueError(
+                        "Production WEB_PASSWORD is too short (minimum 16 chars required)."
+                    )
 
         return self
 

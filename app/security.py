@@ -3,6 +3,7 @@
 import datetime
 import logging
 import secrets
+import sys
 import threading
 import time
 from enum import StrEnum
@@ -435,7 +436,10 @@ def generate_secure_api_key(role: Role | str = Role.UPLOAD) -> str:
 
 
 if __name__ == "__main__":
-    print("=== League Voice Recorder Cryptographically Secure Keys ===")
-    print(f"UPLOAD_KEY={generate_secure_api_key(Role.UPLOAD)}")
-    print(f"PULL_KEY={generate_secure_api_key(Role.PULL)}")
-    print(f"ADMIN_KEY={generate_secure_api_key(Role.ADMIN)}")
+    out = (
+        "=== League Voice Recorder Cryptographically Secure Keys ===\n"
+        f"UPLOAD_KEY={generate_secure_api_key(Role.UPLOAD)}\n"
+        f"PULL_KEY={generate_secure_api_key(Role.PULL)}\n"
+        f"ADMIN_KEY={generate_secure_api_key(Role.ADMIN)}\n"
+    )
+    sys.stdout.write(out)
