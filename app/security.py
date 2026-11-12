@@ -47,14 +47,14 @@ SCANNER_PROBE_REGEX = re.compile(
     |rest_route=/wp/
     # Common admin panels & proxy probes
     |(?:phpmyadmin|pma|myadmin|adminer|cpanel|whm|webmail|roundcube|ecp|owa|autodiscover|proxy_subdomain)
-    # Spring Boot Actuator, Laravel Telescope, debug consoles, server-status
-    |/(?:actuator|telescope|debug/default/view|console(?:/|$)|server-status|server-info|elmah\.axd|trace\.axd)(?:/|$|\?)
-    # GraphQL probes (this backend is purely RESTful under /api/v1)
-    |/(?:graphql|gql|api/graphql|graphql/api|api/gql)(?:/|$|\?)
-    # Docker registry / exchange / maven / vite probes
-    |/(?:v1/_catalog|v2/_catalog|exporttool|META-INF|WEB-INF|%40vite|@vite)(?:/|$|\?)
-    # Config & sensitive files
-    |/(?:config\.json|\.well-known/security\.txt|sftp\.json)(?:/|$|\?)
+    # Spring Boot Actuator, Laravel Telescope, debug consoles, server-status, metrics
+    |/(?:actuator|telescope|debug/default/view|console(?:/|$)|server-status|server-info|elmah\.axd|trace\.axd|metrics|prometheus)(?:/|$|\?)
+    # GraphQL, MCP, AI models, and SSE probes (this backend is purely RESTful under /api/v1)
+    |/(?:graphql|gql|api/graphql|graphql/api|api/gql|v1/models|models|mcp|api/mcp|mcp-sse|sse)(?:/|$|\?)
+    # Docker registry / exchange / maven / vite / IoT probes
+    |/(?:v1/_catalog|v2/_catalog|exporttool|META-INF|WEB-INF|%40vite|@vite|HNAP1|nmap|evox|sdk)(?:/|$|\?)
+    # Config & crawler probes
+    |/(?:config\.json|\.well-known/security\.txt|sftp\.json|robots\.txt|sitemap\.xml)(?:/|$|\?)
     """
 )
 
@@ -99,6 +99,8 @@ class InMemoryRateLimiter:
         self._blocked_ips: dict[str, float] = {}
         # client_ip -> reason for ban
         self._blocked_reasons: dict[str, str] = {}
+        # Persistent banned IPs from database: ip -> dict with details
+        self._persistent_banned_ips: dict[str, dict[str, any]] = {}
 
     def _cleanup_old_timestamps(
         self, timestamps: list[float], window_seconds: float
@@ -106,11 +108,79 @@ class InMemoryRateLimiter:
         threshold = time.monotonic() - window_seconds
         return [ts for ts in timestamps if ts > threshold]
 
+    def load_banned_ips_from_db(self) -> int:
+        """Load persistent banned IPs from database into memory cache."""
+        try:
+            from sqlalchemy import select
+
+            from app.database import get_session_factory
+            from app.models import BannedIP
+
+            session_maker = get_session_factory()
+            with session_maker() as session:
+                records = session.scalars(select(BannedIP)).all()
+                with self._lock:
+                    for rec in records:
+                        self._persistent_banned_ips[rec.ip] = {
+                            "reason": rec.reason,
+                            "violation_count": rec.violation_count,
+                            "created_at": (rec.created_at.isoformat() if rec.created_at else ""),
+                        }
+                logger.info("Loaded %d persistent banned IPs from database", len(records))
+                return len(records)
+        except Exception as exc:
+            logger.warning("Could not load banned IPs from database: %s", exc)
+            return 0
+
+    def is_ip_banned_permanent(self, ip: str) -> bool:
+        """Check if an IP is permanently banned."""
+        with self._lock:
+            return ip in self._persistent_banned_ips
+
+    def ban_ip_permanent(self, ip: str, reason: str = "Malicious scanner probe") -> None:
+        """Permanently ban an IP in memory and persist to SQLite database."""
+        now_iso = datetime.datetime.now(datetime.UTC).isoformat()
+        with self._lock:
+            if ip in self._persistent_banned_ips:
+                self._persistent_banned_ips[ip]["violation_count"] += 1
+                self._persistent_banned_ips[ip]["reason"] = reason
+            else:
+                self._persistent_banned_ips[ip] = {
+                    "reason": reason,
+                    "violation_count": 1,
+                    "created_at": now_iso,
+                }
+            self._blocked_reasons[ip] = reason
+        logger.warning("🚨 IP %s PERMANENTLY BANNED in database: %s", ip, reason)
+
+        # Persist to database
+        try:
+            from sqlalchemy import select
+
+            from app.database import get_session_factory
+            from app.models import BannedIP
+
+            session_maker = get_session_factory()
+            with session_maker() as session:
+                rec = session.scalar(select(BannedIP).where(BannedIP.ip == ip))
+                if rec:
+                    rec.violation_count += 1
+                    rec.reason = reason
+                else:
+                    session.add(BannedIP(ip=ip, reason=reason, violation_count=1))
+                session.commit()
+        except Exception as exc:
+            logger.error("Failed to persist banned IP %s to database: %s", ip, exc)
+
     def is_ip_blocked(self, ip: str) -> tuple[bool, int]:
-        """Check if an IP is currently blocked due to auth failures or scanner activity.
+        """Check if an IP is currently blocked (permanent or temporary).
 
         Returns (is_blocked, remaining_seconds).
         """
+        with self._lock:
+            if ip in self._persistent_banned_ips:
+                return True, 0
+
         now = time.monotonic()
         with self._lock:
             blocked_until = self._blocked_ips.get(ip)
@@ -127,6 +197,10 @@ class InMemoryRateLimiter:
     def get_block_reason(self, ip: str) -> str:
         """Return the reason an IP was blocked, or default description."""
         with self._lock:
+            if ip in self._persistent_banned_ips:
+                return self._persistent_banned_ips[ip].get(
+                    "reason", "Malicious scanner probe (permanently banned)"
+                )
             return self._blocked_reasons.get(ip, "Authentication brute-force or scanner activity")
 
     def block_ip(
@@ -135,7 +209,11 @@ class InMemoryRateLimiter:
         duration_minutes: int,
         reason: str = "Administrative or security block",
     ) -> None:
-        """Explicitly and immediately ban an IP address for the specified duration."""
+        """Ban an IP address. If duration_minutes == 0 or >= 60, ban permanently in database."""
+        if duration_minutes == 0 or duration_minutes >= 60:
+            self.ban_ip_permanent(ip, reason=reason)
+            return
+
         now = time.monotonic()
         with self._lock:
             blocked_until = now + (duration_minutes * 60.0)
@@ -191,7 +269,7 @@ class InMemoryRateLimiter:
     ) -> bool:
         """Record a client probe failure (404/405/400).
 
-        Returns True if the IP is now blocked.
+        If threshold is reached, permanently bans the IP in database.
         """
         now = time.monotonic()
         with self._lock:
@@ -199,43 +277,70 @@ class InMemoryRateLimiter:
             failures = self._cleanup_old_timestamps(failures, window_seconds)
             failures.append(now)
             self._probe_failures[ip] = failures
+            reached = len(failures) >= max_failures
 
-            if len(failures) >= max_failures:
-                blocked_until = now + (block_duration_minutes * 60.0)
-                self._blocked_ips[ip] = blocked_until
-                self._blocked_reasons[ip] = reason
-                logger.warning(
-                    "🚨 Scanner protection: IP %s BANNED for %d min (%d probe attempts in %ds): %s",
-                    ip,
-                    block_duration_minutes,
-                    len(failures),
-                    int(window_seconds),
-                    reason,
-                )
-                return True
-            return False
+        if reached:
+            self.ban_ip_permanent(ip, reason=reason)
+            return True
+        return False
 
     def unblock_ip(self, ip: str) -> bool:
-        """Unblock an IP address. Returns True if IP was blocked."""
+        """Unblock an IP address from database bans and reset all rate limit quotas."""
         with self._lock:
-            removed = self._blocked_ips.pop(ip, None) is not None
+            removed_temp = self._blocked_ips.pop(ip, None) is not None
             self._blocked_reasons.pop(ip, None)
-            if removed:
-                logger.info("IP %s manually unblocked", ip)
-            return removed
+            removed_perm = self._persistent_banned_ips.pop(ip, None) is not None
+            self._probe_failures.pop(ip, None)
+            self._auth_failures.pop(ip, None)
+            self._general_requests.pop(ip, None)
+            self._upload_requests.pop(ip, None)
+
+        # Remove from database
+        try:
+            from sqlalchemy import delete
+
+            from app.database import get_session_factory
+            from app.models import BannedIP
+
+            session_maker = get_session_factory()
+            with session_maker() as session:
+                stmt = delete(BannedIP).where(BannedIP.ip == ip)
+                result = session.execute(stmt)
+                session.commit()
+                if result.rowcount > 0:
+                    removed_perm = True
+        except Exception as exc:
+            logger.error("Failed to remove banned IP %s from database: %s", ip, exc)
+
+        removed = removed_temp or removed_perm
+        if removed:
+            logger.info("IP %s manually unblocked and rate limits reset", ip)
+        return removed
 
     def get_blocked_ips(self) -> dict[str, dict[str, any]]:
-        """Get snapshot of currently blocked IPs with remaining seconds and reason."""
-        now = time.monotonic()
+        """Get snapshot of all banned IPs (persistent from DB and temporary)."""
         result: dict[str, dict[str, any]] = {}
+        now = time.monotonic()
         with self._lock:
+            # 1. Persistent bans from database
+            for ip, info in self._persistent_banned_ips.items():
+                result[ip] = {
+                    "type": "permanent",
+                    "reason": info.get("reason", "Scanner/exploit ban"),
+                    "violation_count": info.get("violation_count", 1),
+                    "created_at": info.get("created_at", ""),
+                }
+
+            # 2. Temporary blocks
             expired = []
             for ip, blocked_until in self._blocked_ips.items():
                 if now < blocked_until:
-                    result[ip] = {
-                        "remaining_seconds": int(blocked_until - now) + 1,
-                        "reason": self._blocked_reasons.get(ip, "Authentication or probe failure"),
-                    }
+                    if ip not in result:
+                        result[ip] = {
+                            "type": "temporary",
+                            "remaining_seconds": int(blocked_until - now) + 1,
+                            "reason": self._blocked_reasons.get(ip, "Authentication failure"),
+                        }
                 else:
                     expired.append(ip)
             for ip in expired:
@@ -279,6 +384,7 @@ class InMemoryRateLimiter:
             self._probe_failures.clear()
             self._blocked_ips.clear()
             self._blocked_reasons.clear()
+            self._persistent_banned_ips.clear()
 
 
 # Global rate limiter instance
@@ -345,6 +451,35 @@ def is_scanner_probe(request: Request) -> bool:
     full_target = f"{path}?{query}" if query else path
 
     return bool(SCANNER_PROBE_REGEX.search(full_target))
+
+
+def log_activity_event(
+    ip: str,
+    method: str,
+    path: str,
+    status_code: int,
+    category: str,
+    details: str = "",
+) -> None:
+    """Record an IP activity event into SQLite database."""
+    try:
+        from app.database import get_session_factory
+        from app.models import IPActivity
+
+        session_maker = get_session_factory()
+        with session_maker() as session:
+            ev = IPActivity(
+                ip=ip,
+                method=method[:16],
+                path=path[:255],
+                status_code=status_code,
+                category=category[:32],
+                details=details[:255] if details else None,
+            )
+            session.add(ev)
+            session.commit()
+    except Exception as exc:
+        logger.debug("Failed to record IP activity: %s", exc)
 
 
 # -----------------------------------------------------------------------------

@@ -415,7 +415,7 @@ def test_is_scanner_probe_detection():
 
 
 def test_instant_ip_ban_on_scanner_probe(test_settings: Settings):
-    """Verify an instant IP ban is enforced when an untrusted IP hits zero-tolerance probes."""
+    """Verify an instant permanent IP ban is enforced on zero-tolerance probes."""
     from starlette.testclient import TestClient as CustomClient
 
     from app.main import create_app
@@ -424,25 +424,23 @@ def test_instant_ip_ban_on_scanner_probe(test_settings: Settings):
     scanner_ip = "198.51.100.77"
     client = CustomClient(app, client=(scanner_ip, 40000))
 
-    # Probe /.env -> instant ban
+    # Probe /.env -> instant ban; gives them nothing (empty 403, connection close)
     resp = client.get("/.env")
-    assert resp.status_code == 429
-    assert "Retry-After" in resp.headers
-    assert "scanner" in resp.json()["detail"].lower()
+    assert resp.status_code == 403
+    assert len(resp.content) == 0
+    assert resp.headers.get("connection") == "close"
 
-    # Verify IP is tracked as blocked in rate limiter
-    is_blocked, remaining = rate_limiter.is_ip_blocked(scanner_ip)
-    assert is_blocked is True
-    assert remaining > 0
+    # Verify IP is tracked as permanently blocked in rate limiter and DB
+    assert rate_limiter.is_ip_banned_permanent(scanner_ip) is True
 
-    # Any subsequent request from this IP is now immediately rejected
+    # Any subsequent request from this IP is now immediately rejected with empty 403
     subsequent = client.get("/api/v1/health", headers={"X-API-Key": TEST_PULL_KEY})
-    assert subsequent.status_code == 429
-    assert "temporarily blocked" in subsequent.json()["detail"].lower()
+    assert subsequent.status_code == 403
+    assert len(subsequent.content) == 0
 
 
 def test_heuristic_scanner_threshold_ban(test_settings: Settings):
-    """Verify repeated 404/400 errors from an untrusted client trigger an automated IP ban."""
+    """Verify repeated 404/400 errors from an untrusted client trigger a permanent IP ban in DB."""
     from starlette.testclient import TestClient as CustomClient
 
     from app.main import create_app
@@ -456,17 +454,17 @@ def test_heuristic_scanner_threshold_ban(test_settings: Settings):
         resp = client.get(f"/nonexistent-path-{i}")
         assert resp.status_code == 404
 
-    is_blocked, _ = rate_limiter.is_ip_blocked(scanner_ip)
-    assert is_blocked is False
+    assert rate_limiter.is_ip_banned_permanent(scanner_ip) is False
 
-    # 5th invalid request reaches threshold and triggers ban
+    # 5th invalid request reaches threshold and triggers ban; gives them nothing
     resp_5 = client.get("/nonexistent-path-final")
-    assert resp_5.status_code == 429
-    assert "Retry-After" in resp_5.headers
+    assert resp_5.status_code == 403
+    assert len(resp_5.content) == 0
 
-    # 6th request is blocked at middleware
+    # 6th request is blocked at middleware with empty 403
     resp_6 = client.get("/api/v1/health")
-    assert resp_6.status_code == 429
+    assert resp_6.status_code == 403
+    assert len(resp_6.content) == 0
 
 
 def test_authenticated_404_does_not_trigger_scanner_ban(test_settings: Settings):
@@ -567,3 +565,46 @@ def test_web_security_blocked_ips_endpoints(client: TestClient):
     # Verify no longer blocked
     is_blocked, _ = rate_limiter.is_ip_blocked(test_ip)
     assert is_blocked is False
+
+
+def test_banned_ips_db_persistence(test_settings: Settings):
+    """Verify that banned IPs are persisted in the database and reloaded across restarts."""
+    from sqlalchemy import select
+
+    from app.database import get_session_factory
+    from app.main import create_app
+    from app.models import BannedIP
+
+    # Ensure tables are created
+    create_app()
+    scanner_ip = "198.51.100.199"
+    rate_limiter.reset()
+
+    # Ban permanently
+    rate_limiter.ban_ip_permanent(scanner_ip, reason="Database persistence test")
+    assert rate_limiter.is_ip_banned_permanent(scanner_ip) is True
+
+    # Check it exists in SQLite database
+    session_maker = get_session_factory()
+    with session_maker() as session:
+        rec = session.scalar(select(BannedIP).where(BannedIP.ip == scanner_ip))
+        assert rec is not None
+        assert rec.ip == scanner_ip
+        assert "persistence test" in rec.reason
+        assert rec.violation_count == 1
+
+    # Simulate server restart: clear memory cache
+    rate_limiter.reset()
+    assert rate_limiter.is_ip_banned_permanent(scanner_ip) is False
+
+    # Reload from database (lifespan hook)
+    loaded_count = rate_limiter.load_banned_ips_from_db()
+    assert loaded_count >= 1
+    assert rate_limiter.is_ip_banned_permanent(scanner_ip) is True
+
+    # Unblock and verify removed from database
+    rate_limiter.unblock_ip(scanner_ip)
+    assert rate_limiter.is_ip_banned_permanent(scanner_ip) is False
+    with session_maker() as session:
+        rec_after = session.scalar(select(BannedIP).where(BannedIP.ip == scanner_ip))
+        assert rec_after is None

@@ -23,6 +23,7 @@ from app.security import (
     get_client_ip,
     is_scanner_probe,
     is_trusted_ip,
+    log_activity_event,
     rate_limiter,
     validate_tls_certificates,
 )
@@ -93,6 +94,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_db()
     logger.info("Database initialized at %s", settings.database_path)
 
+    # Load persistent banned IPs from database
+    rate_limiter.load_banned_ips_from_db()
+
     # Validate TLS configuration
     if settings.is_production:
         valid, msg = validate_tls_certificates(settings.SSL_CERT, settings.SSL_KEY)
@@ -155,10 +159,34 @@ def create_app() -> FastAPI:
     async def security_and_rate_limit_middleware(request: Request, call_next):
         client_ip = get_client_ip(request)
 
-        # 1. Check if IP is already blocked
+        # 1. Check permanent database ban - give them nothing (empty 403, connection close)
+        if rate_limiter.is_ip_banned_permanent(client_ip):
+            log_activity_event(
+                ip=client_ip,
+                method=request.method,
+                path=request.url.path,
+                status_code=status.HTTP_403_FORBIDDEN,
+                category="blocked",
+                details="Permanently banned IP connection dropped",
+            )
+            return Response(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content=b"",
+                headers={"Connection": "close"},
+            )
+
+        # 2. Check temporary auth failure block
         is_blocked, remaining = rate_limiter.is_ip_blocked(client_ip)
         if is_blocked:
             reason = rate_limiter.get_block_reason(client_ip)
+            log_activity_event(
+                ip=client_ip,
+                method=request.method,
+                path=request.url.path,
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                category="blocked",
+                details=f"Auth failure temporary block ({reason})",
+            )
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
@@ -172,31 +200,41 @@ def create_app() -> FastAPI:
 
         trusted = is_trusted_ip(client_ip, settings.WEB_ALLOWED_IPS)
 
-        # 2. Check for instant scanner / exploit probe (if enabled and not trusted)
+        # 3. Check for instant scanner / exploit probe (permanently ban in database)
         if settings.SCANNER_BLOCK_ENABLED and not trusted and is_scanner_probe(request):
-            rate_limiter.block_ip(
+            rate_limiter.ban_ip_permanent(
                 ip=client_ip,
-                duration_minutes=settings.SCANNER_BLOCK_DURATION_MINUTES,
                 reason=f"Malicious scanner probe ({request.method} {request.url.path})",
             )
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={
-                    "detail": (
-                        "Malicious scanner probe detected. IP temporarily blocked. "
-                        f"Try again in {settings.SCANNER_BLOCK_DURATION_MINUTES * 60} seconds."
-                    )
-                },
-                headers={"Retry-After": str(settings.SCANNER_BLOCK_DURATION_MINUTES * 60)},
+            log_activity_event(
+                ip=client_ip,
+                method=request.method,
+                path=request.url.path,
+                status_code=status.HTTP_403_FORBIDDEN,
+                category="suspicious",
+                details=f"Instant probe banned ({request.method} {request.url.path})",
+            )
+            return Response(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content=b"",
+                headers={"Connection": "close"},
             )
 
-        # 3. General rate limit per minute
+        # 4. General rate limit per minute
         allowed, remaining_quota, retry_after = rate_limiter.check_rate_limit(
             ip=client_ip,
             category="general",
             limit_per_minute=settings.RATE_LIMIT_PER_MINUTE,
         )
         if not allowed:
+            log_activity_event(
+                ip=client_ip,
+                method=request.method,
+                path=request.url.path,
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                category="blocked",
+                details="General API rate limit exceeded",
+            )
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"detail": "General API rate limit exceeded. Please slow down."},
@@ -209,7 +247,7 @@ def create_app() -> FastAPI:
 
         response = await call_next(request)
 
-        # 4. Probe / Client error threshold check for unauthenticated & untrusted requests
+        # 5. Probe / Client error threshold check for unauthenticated & untrusted requests
         if (
             settings.SCANNER_BLOCK_ENABLED
             and not trusted
@@ -233,21 +271,48 @@ def create_app() -> FastAPI:
                     ip=client_ip,
                     max_failures=thresh,
                     window_seconds=settings.SCANNER_FAILURE_WINDOW_SECONDS,
-                    block_duration_minutes=settings.SCANNER_BLOCK_DURATION_MINUTES,
                     reason=f"Scanner probe threshold ({thresh} errors in {win_sec}s)",
                 )
                 if blocked:
-                    ban_mins = settings.SCANNER_BLOCK_DURATION_MINUTES
-                    return JSONResponse(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        content={
-                            "detail": (
-                                "Too many invalid requests. Scanner activity detected. "
-                                f"IP temporarily blocked for {ban_mins} minutes."
-                            )
-                        },
-                        headers={"Retry-After": str(ban_mins * 60)},
+                    log_activity_event(
+                        ip=client_ip,
+                        method=request.method,
+                        path=request.url.path,
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        category="suspicious",
+                        details=f"Scanner threshold reached ({thresh} errors) - banned",
                     )
+                    return Response(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content=b"",
+                        headers={"Connection": "close"},
+                    )
+
+        # 6. Log normal and download activity (exclude routine dashboard polls & favicon)
+        req_path = request.url.path
+        if req_path not in ("/favicon.ico",) and not req_path.startswith("/web/api/security/"):
+            if "/download" in req_path and response.status_code in (200, 206):
+                cat = "download"
+                if req_path.endswith("/download"):
+                    game_target = req_path.rstrip("/").split("/")[-2]
+                else:
+                    game_target = req_path.split("/")[-1]
+                details_text = f"Downloaded recording: {game_target}"
+            elif response.status_code in (400, 404, 405):
+                cat = "suspicious"
+                details_text = f"Invalid client request HTTP {response.status_code}"
+            else:
+                cat = "api"
+                details_text = f"HTTP {response.status_code}"
+
+            log_activity_event(
+                ip=client_ip,
+                method=request.method,
+                path=req_path,
+                status_code=response.status_code,
+                category=cat,
+                details=details_text,
+            )
 
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"

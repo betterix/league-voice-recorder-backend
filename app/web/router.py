@@ -15,12 +15,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import Recording
+from app.models import IPActivity, Recording
 from app.schemas import MessageResponse, RecordingMetadata
 from app.security import get_client_ip, rate_limiter
 from app.storage import (
@@ -90,17 +91,112 @@ def get_blocked_ips(
     return {"blocked_ips": rate_limiter.get_blocked_ips()}
 
 
+class BanIPRequest(BaseModel):
+    reason: str = "Manually banned by administrator"
+
+
 @router.post("/api/security/unblock/{ip}", summary="Unban an IP address")
 def unblock_banned_ip(
     ip: str,
     username: str = Depends(require_web_access),
 ) -> dict:
-    """Unblock an IP address from brute-force or scanner protection."""
+    """Unblock an IP address from persistent database ban and reset rate limits."""
     unblocked = rate_limiter.unblock_ip(ip)
     return {
         "ip": ip,
         "unblocked": unblocked,
-        "message": f"IP {ip} unblocked" if unblocked else f"IP {ip} was not blocked",
+        "removed": unblocked,
+        "success": True,
+        "message": f"IP {ip} unblocked and rate limits reset"
+        if unblocked
+        else f"IP {ip} was not blocked, rate limits reset",
+    }
+
+
+@router.post("/api/security/block/{ip}", summary="Manually ban an IP address")
+def manual_ban_ip(
+    ip: str,
+    payload: BanIPRequest | None = None,
+    reason: str | None = None,
+    username: str = Depends(require_web_access),
+) -> dict:
+    """Manually add an IP address to persistent database ban."""
+    ban_reason = (
+        payload.reason if payload and payload.reason else reason
+    ) or "Manually banned by administrator"
+    rate_limiter.ban_ip_permanent(ip, reason=ban_reason)
+    return {
+        "ip": ip,
+        "banned": True,
+        "success": True,
+        "message": f"IP {ip} permanently banned in database.",
+    }
+
+
+@router.get("/api/security/activity", summary="Query IP activity audit log")
+def get_ip_activity(
+    category: str | None = None,
+    search: str | None = None,
+    limit: int = 100,
+    username: str = Depends(require_web_access),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return recent IP access activity categorized by downloads, suspicious probes, and API."""
+    query = select(IPActivity)
+
+    if category and category.lower() != "all":
+        query = query.where(IPActivity.category == category.lower())
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                IPActivity.ip.ilike(term),
+                IPActivity.path.ilike(term),
+                IPActivity.details.ilike(term),
+            )
+        )
+
+    # Order by newest first
+    limit = min(max(1, limit), 200)
+    items = db.scalars(query.order_by(IPActivity.created_at.desc()).limit(limit)).all()
+
+    # Calculate category summary counts
+    counts = {
+        "all": db.scalar(select(func.count(IPActivity.id))) or 0,
+        "download": db.scalar(
+            select(func.count(IPActivity.id)).where(IPActivity.category == "download")
+        )
+        or 0,
+        "suspicious": db.scalar(
+            select(func.count(IPActivity.id)).where(IPActivity.category == "suspicious")
+        )
+        or 0,
+        "blocked": db.scalar(
+            select(func.count(IPActivity.id)).where(IPActivity.category == "blocked")
+        )
+        or 0,
+        "api": db.scalar(select(func.count(IPActivity.id)).where(IPActivity.category == "api"))
+        or 0,
+    }
+
+    return {
+        "items": [
+            {
+                "id": ev.id,
+                "ip": ev.ip,
+                "method": ev.method,
+                "path": ev.path,
+                "status_code": ev.status_code,
+                "category": ev.category,
+                "details": ev.details or "",
+                "created_at": ev.created_at.isoformat() if ev.created_at else "",
+            }
+            for ev in items
+        ],
+        "total": len(items),
+        "counts": counts,
+        "blocked_ips": rate_limiter.get_blocked_ips(),
     }
 
 

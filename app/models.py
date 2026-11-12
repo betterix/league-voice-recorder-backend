@@ -74,3 +74,79 @@ class Recording(Base):
             f"duration={self.duration:.1f}s, "
             f"size={self.file_size})>"
         )
+
+
+class BannedIP(Base):
+    """Database model storing permanently banned scanner and exploit IP addresses."""
+
+    __tablename__ = "banned_ips"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # IP address (IPv4 or IPv6)
+    ip: Mapped[str] = mapped_column(
+        String(64),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    # Reason for the ban (e.g. "Malicious scanner probe (GET /.env)")
+    reason: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Total violation count
+    violation_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return f"<BannedIP(ip='{self.ip}', violations={self.violation_count})>"
+
+
+class IPActivity(Base):
+    """Database model logging IP access events, downloads, and suspicious scanner probes."""
+
+    __tablename__ = "ip_activity"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Client IP address
+    ip: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+
+    # HTTP Method and Path
+    method: Mapped[str] = mapped_column(String(16), nullable=False)
+    path: Mapped[str] = mapped_column(String(255), nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Category: 'download', 'suspicious', 'blocked', 'api'
+    category: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+
+    # Extra details (e.g. Game ID or probe signature)
+    details: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Timestamp
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        index=True,
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("ix_ip_activity_created_at_desc", created_at.desc()),
+        Index("ix_ip_activity_cat_created", "category", "created_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<IPActivity(ip='{self.ip}', category='{self.category}', path='{self.path}')>"

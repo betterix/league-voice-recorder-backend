@@ -499,6 +499,239 @@
       gap: 12px;
       margin-top: 24px;
     }
+
+    /* Tabs Navigation */
+    .tabs-nav {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: var(--card-hover);
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: var(--card-bg);
+      border-color: var(--card-border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .tab-icon-rec {
+      color: var(--primary);
+    }
+
+    .tab-icon-sec {
+      color: var(--danger);
+    }
+
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .stat-card-clickable {
+      cursor: pointer;
+    }
+    .stat-card-clickable:hover {
+      border-color: rgba(239, 68, 68, 0.5) !important;
+    }
+
+    /* Category Filter Pills */
+    .category-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .category-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .category-pill:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    .category-pill.active {
+      background: var(--card-hover);
+      color: #fff;
+    }
+
+    .category-pill.pill-all.active {
+      border-color: #94a3b8;
+      background: rgba(148, 163, 184, 0.15);
+      color: #f8fafc;
+    }
+
+    .category-pill.pill-download.active {
+      border-color: var(--primary);
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+    }
+
+    .category-pill.pill-suspicious.active {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+
+    .category-pill.pill-blocked.active {
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+    }
+
+    .category-pill.pill-api.active {
+      border-color: var(--accent);
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent);
+    }
+
+    .pill-count {
+      padding: 1px 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.1);
+      font-size: 11px;
+    }
+
+    /* Security Section Headings */
+    .sec-section {
+      margin-bottom: 32px;
+    }
+
+    .sec-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .sec-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sec-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* Activity Badges */
+    .badge-cat {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-cat-download {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-cat-suspicious {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-cat-blocked {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .badge-cat-api {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .badge-method {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--badge-bg);
+      color: var(--text);
+    }
+
+    .badge-status {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-2xx {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+    }
+    .status-4xx {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+    .status-blocked {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .ip-mono {
+      font-family: ui-monospace, monospace;
+      font-weight: 700;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -547,62 +780,198 @@
         <div class="stat-value" id="stat-storage">--</div>
         <div class="stat-meta" id="stat-free">Checking disk capacity...</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Active Scanner Bans</div>
+      <div class="stat-card stat-card-clickable" onclick="switchView('security')" title="Click to view Security &amp; IP Traffic Audit">
+        <div class="stat-label">Active Scanner Bans &#8599;</div>
         <div class="stat-value" id="stat-banned-ips">0</div>
         <div class="stat-meta" id="stat-defense-status">Automated IP defense active</div>
       </div>
     </div>
 
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="search-box">
-        <span class="search-icon">&#128269;</span>
-        <input 
-          type="text" 
-          id="search-input" 
-          class="search-input" 
-          placeholder="Filter by Game ID, Team Tag, or Notes..."
-          oninput="handleSearch(this.value)"
-        >
+    <!-- Main View Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" id="tab-btn-recordings" onclick="switchView('recordings')">
+        <span class="tab-icon-rec">&#127911;</span> Scrim Recordings
+      </button>
+      <button class="tab-btn" id="tab-btn-security" onclick="switchView('security')">
+        <span class="tab-icon-sec">&#128737;</span> Security &amp; IP Audit
+        <span class="tab-badge" id="tab-security-badge" style="display: none;">0</span>
+      </button>
+    </div>
+
+    <!-- Recordings View Panel -->
+    <div id="view-recordings" class="view-panel">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">&#128269;</span>
+          <input 
+            type="text" 
+            id="search-input" 
+            class="search-input" 
+            placeholder="Filter by Game ID, Team Tag, or Notes..."
+            oninput="handleSearch(this.value)"
+          >
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="loadRecordings()">
+            &#8635; Refresh
+          </button>
+          <button class="btn btn-primary" onclick="openUploadModal()">
+            &#8679; Upload Scrim MP3
+          </button>
+        </div>
       </div>
 
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-secondary" onclick="loadRecordings()">
-          &#8635; Refresh
-        </button>
-        <button class="btn btn-primary" onclick="openUploadModal()">
-          &#8679; Upload Scrim MP3
-        </button>
+      <!-- Table -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Game ID</th>
+              <th>Team</th>
+              <th>Recorded Date</th>
+              <th>Duration</th>
+              <th>Quality</th>
+              <th>Size</th>
+              <th>Notes</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recordings-body">
+            <tr>
+              <td colspan="8">
+                <div class="empty-state">
+                  <div class="empty-icon">&#8987;</div>
+                  <div>Loading scrimmage recordings...</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Game ID</th>
-            <th>Team</th>
-            <th>Recorded Date</th>
-            <th>Duration</th>
-            <th>Quality</th>
-            <th>Size</th>
-            <th>Notes</th>
-            <th style="text-align: right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="recordings-body">
-          <tr>
-            <td colspan="8">
-              <div class="empty-state">
-                <div class="empty-icon">&#8987;</div>
-                <div>Loading scrimmage recordings...</div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Security & IP Audit View Panel -->
+    <div id="view-security" class="view-panel" style="display: none;">
+      <!-- Security Category Toolbar -->
+      <div class="toolbar" style="margin-bottom: 24px;">
+        <div class="category-pills">
+          <button class="category-pill pill-all active" id="pill-all" onclick="setSecCategory('all')">
+            All Events <span class="pill-count" id="count-all">0</span>
+          </button>
+          <button class="category-pill pill-download" id="pill-download" onclick="setSecCategory('download')">
+            &#128190; Downloads <span class="pill-count" id="count-download">0</span>
+          </button>
+          <button class="category-pill pill-suspicious" id="pill-suspicious" onclick="setSecCategory('suspicious')">
+            &#9888; Suspicious Probes <span class="pill-count" id="count-suspicious">0</span>
+          </button>
+          <button class="category-pill pill-blocked" id="pill-blocked" onclick="setSecCategory('blocked')">
+            &#128737; Blocked <span class="pill-count" id="count-blocked">0</span>
+          </button>
+          <button class="category-pill pill-api" id="pill-api" onclick="setSecCategory('api')">
+            &#9881; API Traffic <span class="pill-count" id="count-api">0</span>
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onclick="loadSecurityData()">
+            &#8635; Refresh Logs
+          </button>
+          <button class="btn btn-secondary" onclick="promptManualUnban()">
+            &#128275; Unban IP / Reset Quota
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="promptManualBan()" style="padding: 9px 16px; font-size: 14px;">
+            &#128683; Ban IP
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 1: Active Banned & Rate-Limited IPs -->
+      <div class="sec-section">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">
+              <span>&#128683; Active Banned &amp; Rate-Limited IPs</span>
+              <span class="badge" id="banned-table-count" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">0 Active</span>
+            </div>
+            <div class="sec-sub">Persistent SQLite database bans &amp; temporary rate limiter blocks. Unbanning removes database ban and resets all rate limit quotas.</div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Client IP</th>
+                <th>Ban Type</th>
+                <th>Violations</th>
+                <th>Reason</th>
+                <th>Time / Expiry</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="banned-ips-body">
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state">
+                    <div class="empty-icon">&#128737;</div>
+                    <div>No active bans or rate-limited IPs.</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 2: IP Activity & Traffic Stream -->
+      <div class="sec-section">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">
+              <span>&#128225; IP Activity &amp; Traffic Stream</span>
+            </div>
+            <div class="sec-sub">Real-time categorized events: downloads, scanner probes, and blocked attempts.</div>
+          </div>
+          <div class="search-box" style="max-width: 340px;">
+            <span class="search-icon">&#128269;</span>
+            <input 
+              type="text" 
+              id="sec-search-input" 
+              class="search-input" 
+              placeholder="Search IP, path, status, or notes..."
+              oninput="handleSecSearch(this.value)"
+            >
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Client IP</th>
+                <th>Category</th>
+                <th>Method &amp; Path</th>
+                <th>Status</th>
+                <th>Details</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="activity-body">
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="empty-icon">&#8987;</div>
+                    <div>Loading security activity...</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -729,6 +1098,15 @@
       if (data.blocked_ips_count !== undefined) {
         document.getElementById('stat-banned-ips').textContent = data.blocked_ips_count;
         document.getElementById('stat-defense-status').textContent = data.blocked_ips_count > 0 ? `${data.blocked_ips_count} malicious IPs blocked` : 'Automated IP defense active';
+        const secBadge = document.getElementById('tab-security-badge');
+        if (secBadge) {
+          if (data.blocked_ips_count > 0) {
+            secBadge.textContent = data.blocked_ips_count;
+            secBadge.style.display = 'inline-flex';
+          } else {
+            secBadge.style.display = 'none';
+          }
+        }
       }
 
       if (data.storage_used_bytes !== undefined) {
@@ -908,6 +1286,265 @@
         statusDiv.textContent = 'Upload error: ' + err.message;
       } finally {
         submitBtn.disabled = false;
+      }
+    }
+
+    /* View Switching (Recordings vs Security) */
+    let currentView = 'recordings';
+    let currentSecCategory = 'all';
+    let currentSecSearch = '';
+    let secSearchTimer = null;
+    let currentBlockedIPs = {};
+
+    function switchView(viewName) {
+      currentView = viewName;
+      const recBtn = document.getElementById('tab-btn-recordings');
+      const secBtn = document.getElementById('tab-btn-security');
+      const recView = document.getElementById('view-recordings');
+      const secView = document.getElementById('view-security');
+
+      if (viewName === 'recordings') {
+        recBtn.classList.add('active');
+        secBtn.classList.remove('active');
+        recView.style.display = 'block';
+        secView.style.display = 'none';
+      } else {
+        secBtn.classList.add('active');
+        recBtn.classList.remove('active');
+        recView.style.display = 'none';
+        secView.style.display = 'block';
+        loadSecurityData();
+      }
+    }
+
+    function setSecCategory(cat) {
+      currentSecCategory = cat;
+      const pills = ['all', 'download', 'suspicious', 'blocked', 'api'];
+      pills.forEach(p => {
+        const el = document.getElementById('pill-' + p);
+        if (el) el.classList.toggle('active', p === cat);
+      });
+      loadSecurityData();
+    }
+
+    function handleSecSearch(val) {
+      clearTimeout(secSearchTimer);
+      secSearchTimer = setTimeout(() => {
+        currentSecSearch = val.trim();
+        loadSecurityData();
+      }, 250);
+    }
+
+    async function loadSecurityData() {
+      try {
+        const url = `/web/api/security/activity?category=${encodeURIComponent(currentSecCategory)}&search=${encodeURIComponent(currentSecSearch)}&limit=150`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to load security activity');
+        const data = await res.json();
+        currentBlockedIPs = data.blocked_ips || {};
+
+        // Update Category Counts
+        if (data.counts) {
+          document.getElementById('count-all').textContent = data.counts.all || 0;
+          document.getElementById('count-download').textContent = data.counts.download || 0;
+          document.getElementById('count-suspicious').textContent = data.counts.suspicious || 0;
+          document.getElementById('count-blocked').textContent = data.counts.blocked || 0;
+          document.getElementById('count-api').textContent = data.counts.api || 0;
+        }
+
+        // Update Blocked IPs Count in header stat & badge
+        const blockedCount = Object.keys(currentBlockedIPs).length;
+        document.getElementById('stat-banned-ips').textContent = blockedCount;
+        document.getElementById('stat-defense-status').textContent = blockedCount > 0 ? `${blockedCount} malicious IPs blocked` : 'Automated IP defense active';
+        document.getElementById('banned-table-count').textContent = blockedCount + ' Active';
+        const secBadge = document.getElementById('tab-security-badge');
+        if (secBadge) {
+          if (blockedCount > 0) {
+            secBadge.textContent = blockedCount;
+            secBadge.style.display = 'inline-flex';
+          } else {
+            secBadge.style.display = 'none';
+          }
+        }
+
+        // Render Tables
+        renderBannedIPs(currentBlockedIPs);
+        renderActivityTable(data.items || []);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('activity-body').innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="empty-state" style="color: var(--danger);">
+                <div class="empty-icon">&#9888;</div>
+                <div>Failed to load security logs: ${escapeHtml(err.message)}</div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderBannedIPs(blockedMap) {
+      const tbody = document.getElementById('banned-ips-body');
+      const ips = Object.keys(blockedMap);
+      if (ips.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <div class="empty-icon">&#128737;</div>
+                <div style="font-size: 15px; font-weight: 600; color: #fff;">No Banned or Rate-Limited IPs</div>
+                <div style="font-size: 13px; color: var(--text-dim); margin-top: 4px;">Zero malicious scanners or brute-force bans active. All client traffic is within normal thresholds.</div>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = ips.map(ip => {
+        const info = blockedMap[ip];
+        const safeIp = escapeHtml(ip);
+        const isPerm = info.type === 'permanent';
+        const typeBadge = isPerm 
+          ? `<span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border-color: rgba(139, 92, 246, 0.4);">Permanent (DB)</span>`
+          : `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: rgba(245, 158, 11, 0.4);">Temporary</span>`;
+        const timeInfo = isPerm
+          ? (info.created_at ? formatDate(info.created_at) : 'Saved in DB')
+          : (info.remaining_seconds ? `${info.remaining_seconds}s remaining` : '--');
+        const reason = escapeHtml(info.reason || 'Scanner/exploit probe');
+        const violations = info.violation_count || 1;
+
+        return `
+          <tr>
+            <td><span class="ip-mono">${safeIp}</span></td>
+            <td>${typeBadge}</td>
+            <td><span class="badge" style="background: var(--badge-bg);">${violations}</span></td>
+            <td style="color: var(--text-muted); font-size: 13px; max-width: 320px; overflow: hidden; text-overflow: ellipsis;" title="${reason}">${reason}</td>
+            <td style="color: var(--text-dim); font-size: 13px;">${timeInfo}</td>
+            <td style="text-align: right;">
+              <button class="btn btn-secondary btn-sm" onclick="unbanIP('${safeIp}')" style="color: var(--primary); border-color: rgba(16, 185, 129, 0.4);" title="Remove ban from database and reset rate limit quota">
+                &#128275; Unban &amp; Reset
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderActivityTable(items) {
+      const tbody = document.getElementById('activity-body');
+      if (items.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="empty-state">
+                <div class="empty-icon">&#128225;</div>
+                <div style="font-size: 15px; font-weight: 600; color: #fff;">No Activity Events Recorded</div>
+                <div style="font-size: 13px; color: var(--text-dim); margin-top: 4px;">Activity matching the current filter will appear here in real time.</div>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = items.map(ev => {
+        const safeIp = escapeHtml(ev.ip);
+        const safePath = escapeHtml(ev.path);
+        const safeDetails = escapeHtml(ev.details);
+        const isBanned = Boolean(currentBlockedIPs[ev.ip]);
+
+        // Category Badge
+        let catBadge = `<span class="badge-cat badge-cat-api">API</span>`;
+        if (ev.category === 'download') {
+          catBadge = `<span class="badge-cat badge-cat-download">&#128190; Download</span>`;
+        } else if (ev.category === 'suspicious') {
+          catBadge = `<span class="badge-cat badge-cat-suspicious">&#9888; Suspicious</span>`;
+        } else if (ev.category === 'blocked') {
+          catBadge = `<span class="badge-cat badge-cat-blocked">&#128737; Blocked</span>`;
+        }
+
+        // Status badge
+        let statusBadge = `<span class="badge-status status-2xx">${ev.status_code}</span>`;
+        if (ev.status_code === 403 || ev.status_code === 429) {
+          statusBadge = `<span class="badge-status status-blocked">${ev.status_code}</span>`;
+        } else if (ev.status_code >= 400) {
+          statusBadge = `<span class="badge-status status-4xx">${ev.status_code}</span>`;
+        }
+
+        const actionBtn = isBanned
+          ? `<button class="btn btn-secondary btn-sm" onclick="unbanIP('${safeIp}')" style="color: var(--primary);" title="Unban IP and reset rate limit">&#128275; Unban</button>`
+          : `<button class="btn btn-danger btn-sm" onclick="banIP('${safeIp}')" title="Permanently ban this IP">&#128683; Ban</button>`;
+
+        return `
+          <tr>
+            <td style="color: var(--text-dim); font-size: 13px;">${formatDate(ev.created_at)}</td>
+            <td><span class="ip-mono">${safeIp}</span></td>
+            <td>${catBadge}</td>
+            <td>
+              <span class="badge-method">${escapeHtml(ev.method)}</span>
+              <span style="font-family: ui-monospace, monospace; font-size: 13px; margin-left: 6px; color: #fff;">${safePath}</span>
+            </td>
+            <td>${statusBadge}</td>
+            <td style="color: var(--text-muted); font-size: 13px; max-width: 280px; overflow: hidden; text-overflow: ellipsis;" title="${safeDetails}">
+              ${safeDetails || '<span style="color: var(--text-dim);">--</span>'}
+            </td>
+            <td style="text-align: right;">${actionBtn}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function unbanIP(ip) {
+      if (!confirm(`Unban IP '${ip}' and reset its rate limit token buckets?`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/web/api/security/unblock/${encodeURIComponent(ip)}`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Unban failed');
+        }
+        await loadSecurityData();
+        await loadRecordings();
+      } catch (err) {
+        alert('Failed to unban IP: ' + err.message);
+      }
+    }
+
+    async function banIP(ip, reason) {
+      const banReason = reason || prompt(`Enter permanent ban reason for IP '${ip}':`, 'Scanner / exploit probe ban');
+      if (!banReason) return;
+      try {
+        const res = await fetch(`/web/api/security/block/${encodeURIComponent(ip)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: banReason })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Ban failed');
+        }
+        await loadSecurityData();
+        await loadRecordings();
+      } catch (err) {
+        alert('Failed to ban IP: ' + err.message);
+      }
+    }
+
+    function promptManualUnban() {
+      const ip = prompt('Enter IP address to unban and reset rate limits:');
+      if (ip && ip.trim()) {
+        unbanIP(ip.trim());
+      }
+    }
+
+    function promptManualBan() {
+      const ip = prompt('Enter IP address to permanently ban:');
+      if (ip && ip.trim()) {
+        banIP(ip.trim());
       }
     }
 

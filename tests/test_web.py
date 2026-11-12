@@ -203,3 +203,81 @@ def test_web_disabled_returns_404(test_settings: Settings):
     assert resp.status_code == 404
 
     set_settings(test_settings)
+
+
+def test_web_security_activity_endpoint(client: TestClient):
+    """Verify /web/api/security/activity returns categorized event audit trail."""
+    auth_header = _make_basic_auth(TEST_WEB_USER, TEST_WEB_PASS)
+
+    # 1. Unauthenticated request returns 401
+    resp_unauth = client.get("/web/api/security/activity")
+    assert resp_unauth.status_code == 401
+
+    # 2. Authenticated request returns activity logs and counts
+    resp = client.get("/web/api/security/activity", headers={"Authorization": auth_header})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "items" in data
+    assert "counts" in data
+    assert "all" in data["counts"]
+    assert "download" in data["counts"]
+    assert "suspicious" in data["counts"]
+    assert "blocked" in data["counts"]
+    assert "api" in data["counts"]
+    assert "blocked_ips" in data
+
+    # 3. Category filtering
+    resp_dl = client.get(
+        "/web/api/security/activity?category=download",
+        headers={"Authorization": auth_header},
+    )
+    assert resp_dl.status_code == 200
+
+    resp_suspicious = client.get(
+        "/web/api/security/activity?category=suspicious&search=test",
+        headers={"Authorization": auth_header},
+    )
+    assert resp_suspicious.status_code == 200
+
+
+def test_web_security_manual_block_and_unblock(client: TestClient):
+    """Verify manual IP blocking and unblocking via web endpoints."""
+    auth_header = _make_basic_auth(TEST_WEB_USER, TEST_WEB_PASS)
+    test_ip = "198.51.100.88"
+
+    # 1. Block IP
+    block_resp = client.post(
+        f"/web/api/security/block/{test_ip}",
+        json={"reason": "Manual web ban test"},
+        headers={"Authorization": auth_header},
+    )
+    assert block_resp.status_code == 200
+    assert block_resp.json()["success"] is True
+
+    # 2. Verify IP is in blocked list
+    act_resp = client.get("/web/api/security/activity", headers={"Authorization": auth_header})
+    assert act_resp.status_code == 200
+    blocked_ips = act_resp.json()["blocked_ips"]
+    assert test_ip in blocked_ips
+    assert blocked_ips[test_ip]["type"] == "permanent"
+    assert "Manual web ban test" in blocked_ips[test_ip]["reason"]
+
+    # 3. Unblock IP
+    unblock_resp = client.post(
+        f"/web/api/security/unblock/{test_ip}",
+        headers={"Authorization": auth_header},
+    )
+    assert unblock_resp.status_code == 200
+    assert unblock_resp.json()["removed"] is True
+
+    # 4. Verify IP is removed from blocked list
+    act_resp2 = client.get("/web/api/security/activity", headers={"Authorization": auth_header})
+    assert test_ip not in act_resp2.json()["blocked_ips"]
+
+    # 5. Unblocking non-existent IP returns removed=False
+    unblock_again = client.post(
+        f"/web/api/security/unblock/{test_ip}",
+        headers={"Authorization": auth_header},
+    )
+    assert unblock_again.status_code == 200
+    assert unblock_again.json()["removed"] is False
