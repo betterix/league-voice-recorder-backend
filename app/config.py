@@ -118,6 +118,10 @@ class Settings(BaseSettings):
         ge=1.0,
         description="Sliding window in seconds for tracking probe failures",
     )
+    DATACENTER_BLOCK_ENABLED: bool = Field(
+        default=True,
+        description="Block unauthenticated requests from VPS and Datacenter hosting networks",
+    )
 
     # Web Dashboard Configuration
     WEB_ENABLED: bool = Field(

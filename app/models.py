@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, Float, Index, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -150,3 +150,25 @@ class IPActivity(Base):
 
     def __repr__(self) -> str:
         return f"<IPActivity(ip='{self.ip}', category='{self.category}', path='{self.path}')>"
+
+
+class IPIntel(Base):
+    """Database model caching IP intelligence: Datacenter/VPS vs Residential ISP."""
+
+    __tablename__ = "ip_intel"
+
+    ip: Mapped[str] = mapped_column(String(64), primary_key=True)
+    is_datacenter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    isp: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    org: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    as_info: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        status = "Datacenter" if self.is_datacenter else "Residential"
+        return f"<IPIntel(ip='{self.ip}', type='{status}', org='{self.org or self.isp}')>"

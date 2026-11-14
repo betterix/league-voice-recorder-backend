@@ -608,3 +608,70 @@ def test_banned_ips_db_persistence(test_settings: Settings):
     with session_maker() as session:
         rec_after = session.scalar(select(BannedIP).where(BannedIP.ip == scanner_ip))
         assert rec_after is None
+
+
+def test_ip_intel_service_classification():
+    """Verify IP intelligence service detects private IPs and caches classifications."""
+    import asyncio
+
+    from app.ip_intel import ip_intel_service
+
+    # 1. Private and loopback IPs are not datacenter
+    is_dc, info = asyncio.run(ip_intel_service.is_datacenter_ip("127.0.0.1"))
+    assert is_dc is False
+    assert "Private" in info or "Localhost" in info
+
+    is_dc_priv, _ = asyncio.run(ip_intel_service.is_datacenter_ip("192.168.1.100"))
+    assert is_dc_priv is False
+
+    # 2. In-memory cache hit
+    dummy_vps_ip = "198.51.100.123"
+    with ip_intel_service._lock:
+        ip_intel_service._cache[dummy_vps_ip] = {
+            "is_datacenter": True,
+            "isp": "DigitalOcean, LLC",
+            "org": "DigitalOcean",
+            "as_info": "AS14061",
+            "country": "US",
+        }
+
+    is_dc_vps, provider = asyncio.run(ip_intel_service.is_datacenter_ip(dummy_vps_ip))
+    assert is_dc_vps is True
+    assert "DigitalOcean" in provider
+
+    # 3. get_ip_info returns cached details
+    cached_info = ip_intel_service.get_ip_info(dummy_vps_ip)
+    assert cached_info is not None
+    assert cached_info["is_datacenter"] is True
+
+
+def test_datacenter_ip_blocked_unauthenticated(test_settings: Settings):
+    """Verify unauthenticated requests from a VPS are dropped, but allowed with API key."""
+    from starlette.testclient import TestClient as CustomClient
+
+    from app.ip_intel import ip_intel_service
+    from app.main import create_app
+
+    vps_ip = "203.0.113.88"
+    with ip_intel_service._lock:
+        ip_intel_service._cache[vps_ip] = {
+            "is_datacenter": True,
+            "isp": "Amazon.com, Inc.",
+            "org": "AWS EC2",
+            "as_info": "AS16509",
+            "country": "US",
+        }
+
+    app = create_app()
+    client = CustomClient(app, client=(vps_ip, 50000))
+
+    # 1. Unauthenticated request -> dropped with empty 403 & Connection: close
+    resp_unauth = client.get("/api/v1/health")
+    assert resp_unauth.status_code == 403
+    assert len(resp_unauth.content) == 0
+    assert resp_unauth.headers.get("connection") == "close"
+
+    # 2. Authenticated request with valid X-API-Key -> ALLOWED (VPN player / coach bypass)
+    resp_auth = client.get("/api/v1/health", headers={"X-API-Key": TEST_PULL_KEY})
+    assert resp_auth.status_code == 200
+    assert resp_auth.json()["status"] == "ok"

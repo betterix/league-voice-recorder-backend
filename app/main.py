@@ -17,6 +17,7 @@ from app.api.health import router as health_router
 from app.api.recordings import router as recordings_router
 from app.config import get_settings
 from app.database import init_db
+from app.ip_intel import ip_intel_service
 from app.security import (
     authenticate_key,
     generate_self_signed_cert,
@@ -94,8 +95,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_db()
     logger.info("Database initialized at %s", settings.database_path)
 
-    # Load persistent banned IPs from database
+    # Load persistent banned IPs and IP intelligence cache from database
     rate_limiter.load_banned_ips_from_db()
+    ip_intel_service.load_cache_from_db()
+    logger.info("League Voice Recorder Backend v%s initialized", __version__)
 
     # Validate TLS configuration
     if settings.is_production:
@@ -200,7 +203,31 @@ def create_app() -> FastAPI:
 
         trusted = is_trusted_ip(client_ip, settings.WEB_ALLOWED_IPS)
 
-        # 3. Check for instant scanner / exploit probe (permanently ban in database)
+        # Check if request has a valid API key (players, coaches, analysts)
+        has_valid_api_key = False
+        x_api_key = request.headers.get("X-API-Key")
+        if x_api_key:
+            has_valid_api_key = authenticate_key(x_api_key, settings) is not None
+
+        # 3. Datacenter / VPS bot blocking (reject unauthenticated cloud traffic)
+        if settings.DATACENTER_BLOCK_ENABLED and not trusted and not has_valid_api_key:
+            is_dc, dc_info = await ip_intel_service.is_datacenter_ip(client_ip)
+            if is_dc:
+                log_activity_event(
+                    ip=client_ip,
+                    method=request.method,
+                    path=request.url.path,
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    category="blocked",
+                    details=f"Datacenter/VPS rejected: {dc_info}",
+                )
+                return Response(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content=b"",
+                    headers={"Connection": "close"},
+                )
+
+        # 4. Check for instant scanner / exploit probe (permanently ban in database)
         if settings.SCANNER_BLOCK_ENABLED and not trusted and is_scanner_probe(request):
             rate_limiter.ban_ip_permanent(
                 ip=client_ip,
@@ -251,6 +278,7 @@ def create_app() -> FastAPI:
         if (
             settings.SCANNER_BLOCK_ENABLED
             and not trusted
+            and not has_valid_api_key
             and response.status_code
             in (
                 status.HTTP_404_NOT_FOUND,
@@ -258,39 +286,37 @@ def create_app() -> FastAPI:
                 status.HTTP_400_BAD_REQUEST,
             )
         ):
-            # Check if request had a valid API key
-            has_valid_api_key = False
-            x_api_key = request.headers.get("X-API-Key")
-            if x_api_key:
-                has_valid_api_key = authenticate_key(x_api_key, settings) is not None
-
-            if not has_valid_api_key:
-                win_sec = int(settings.SCANNER_FAILURE_WINDOW_SECONDS)
-                thresh = settings.SCANNER_FAILURE_THRESHOLD
-                blocked = rate_limiter.record_probe_failure(
+            win_sec = int(settings.SCANNER_FAILURE_WINDOW_SECONDS)
+            thresh = settings.SCANNER_FAILURE_THRESHOLD
+            blocked = rate_limiter.record_probe_failure(
+                ip=client_ip,
+                max_failures=thresh,
+                window_seconds=settings.SCANNER_FAILURE_WINDOW_SECONDS,
+                reason=f"Scanner probe threshold ({thresh} errors in {win_sec}s)",
+            )
+            if blocked:
+                log_activity_event(
                     ip=client_ip,
-                    max_failures=thresh,
-                    window_seconds=settings.SCANNER_FAILURE_WINDOW_SECONDS,
-                    reason=f"Scanner probe threshold ({thresh} errors in {win_sec}s)",
+                    method=request.method,
+                    path=request.url.path,
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    category="suspicious",
+                    details=f"Scanner threshold reached ({thresh} errors) - banned",
                 )
-                if blocked:
-                    log_activity_event(
-                        ip=client_ip,
-                        method=request.method,
-                        path=request.url.path,
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        category="suspicious",
-                        details=f"Scanner threshold reached ({thresh} errors) - banned",
-                    )
-                    return Response(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        content=b"",
-                        headers={"Connection": "close"},
-                    )
+                return Response(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content=b"",
+                    headers={"Connection": "close"},
+                )
 
-        # 6. Log normal and download activity (exclude routine dashboard polls & favicon)
+        # 6. Log normal and download activity (exclude routine dashboard polls,
+        # favicon, and localhost/healthchecks)
         req_path = request.url.path
-        if req_path not in ("/favicon.ico",) and not req_path.startswith("/web/api/security/"):
+        if (
+            client_ip not in ("127.0.0.1", "::1", "localhost")
+            and req_path not in ("/favicon.ico",)
+            and not req_path.startswith("/web/api/security/")
+        ):
             if "/download" in req_path and response.status_code in (200, 206):
                 cat = "download"
                 if req_path.endswith("/download"):

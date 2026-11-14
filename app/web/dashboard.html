@@ -1435,7 +1435,8 @@
 
     function renderActivityTable(items) {
       const tbody = document.getElementById('activity-body');
-      if (items.length === 0) {
+      const visibleItems = (items || []).filter(ev => !['127.0.0.1', '::1', 'localhost'].includes(ev.ip));
+      if (visibleItems.length === 0) {
         tbody.innerHTML = `
           <tr>
             <td colspan="7">
@@ -1450,7 +1451,7 @@
         return;
       }
 
-      tbody.innerHTML = items.map(ev => {
+      tbody.innerHTML = visibleItems.map(ev => {
         const safeIp = escapeHtml(ev.ip);
         const safePath = escapeHtml(ev.path);
         const safeDetails = escapeHtml(ev.details);
@@ -1478,10 +1479,18 @@
           ? `<button class="btn btn-secondary btn-sm" onclick="unbanIP('${safeIp}')" style="color: var(--primary);" title="Unban IP and reset rate limit">&#128275; Unban</button>`
           : `<button class="btn btn-danger btn-sm" onclick="banIP('${safeIp}')" title="Permanently ban this IP">&#128683; Ban</button>`;
 
+        const safeIsp = escapeHtml(ev.isp || '');
+        const ispBadge = safeIsp 
+          ? `<div style="font-size: 11px; color: ${ev.is_datacenter ? '#f87171' : 'var(--accent)'}; margin-top: 2px;">${ev.is_datacenter ? '☁️ ' : '🏠 '}${safeIsp}</div>` 
+          : '';
+
         return `
           <tr>
             <td style="color: var(--text-dim); font-size: 13px;">${formatDate(ev.created_at)}</td>
-            <td><span class="ip-mono">${safeIp}</span></td>
+            <td>
+              <span class="ip-mono">${safeIp}</span>
+              ${ispBadge}
+            </td>
             <td>${catBadge}</td>
             <td>
               <span class="badge-method">${escapeHtml(ev.method)}</span>

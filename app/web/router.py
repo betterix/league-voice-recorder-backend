@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
+from app.ip_intel import ip_intel_service
 from app.models import IPActivity, Recording
 from app.schemas import MessageResponse, RecordingMetadata
 from app.security import get_client_ip, rate_limiter
@@ -142,7 +143,8 @@ def get_ip_activity(
     db: Session = Depends(get_db),
 ) -> dict:
     """Return recent IP access activity categorized by downloads, suspicious probes, and API."""
-    query = select(IPActivity)
+    excluded_ips = ("127.0.0.1", "::1", "localhost")
+    query = select(IPActivity).where(IPActivity.ip.not_in(excluded_ips))
 
     if category and category.lower() != "all":
         query = query.where(IPActivity.category == category.lower())
@@ -161,23 +163,14 @@ def get_ip_activity(
     limit = min(max(1, limit), 200)
     items = db.scalars(query.order_by(IPActivity.created_at.desc()).limit(limit)).all()
 
-    # Calculate category summary counts
+    # Calculate category summary counts excluding loopback/localhost
+    base_count = select(func.count(IPActivity.id)).where(IPActivity.ip.not_in(excluded_ips))
     counts = {
-        "all": db.scalar(select(func.count(IPActivity.id))) or 0,
-        "download": db.scalar(
-            select(func.count(IPActivity.id)).where(IPActivity.category == "download")
-        )
-        or 0,
-        "suspicious": db.scalar(
-            select(func.count(IPActivity.id)).where(IPActivity.category == "suspicious")
-        )
-        or 0,
-        "blocked": db.scalar(
-            select(func.count(IPActivity.id)).where(IPActivity.category == "blocked")
-        )
-        or 0,
-        "api": db.scalar(select(func.count(IPActivity.id)).where(IPActivity.category == "api"))
-        or 0,
+        "all": db.scalar(base_count) or 0,
+        "download": db.scalar(base_count.where(IPActivity.category == "download")) or 0,
+        "suspicious": db.scalar(base_count.where(IPActivity.category == "suspicious")) or 0,
+        "blocked": db.scalar(base_count.where(IPActivity.category == "blocked")) or 0,
+        "api": db.scalar(base_count.where(IPActivity.category == "api")) or 0,
     }
 
     return {
@@ -190,6 +183,12 @@ def get_ip_activity(
                 "status_code": ev.status_code,
                 "category": ev.category,
                 "details": ev.details or "",
+                "isp": (ip_intel_service.get_ip_info(ev.ip) or {}).get("org")
+                or (ip_intel_service.get_ip_info(ev.ip) or {}).get("isp")
+                or "",
+                "is_datacenter": (ip_intel_service.get_ip_info(ev.ip) or {}).get(
+                    "is_datacenter", False
+                ),
                 "created_at": ev.created_at.isoformat() if ev.created_at else "",
             }
             for ev in items

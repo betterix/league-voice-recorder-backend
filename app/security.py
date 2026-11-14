@@ -461,7 +461,9 @@ def log_activity_event(
     category: str,
     details: str = "",
 ) -> None:
-    """Record an IP activity event into SQLite database."""
+    """Record an IP activity event into SQLite database (ignores loopback / localhost)."""
+    if ip in ("127.0.0.1", "::1", "localhost"):
+        return
     try:
         from app.database import get_session_factory
         from app.models import IPActivity
