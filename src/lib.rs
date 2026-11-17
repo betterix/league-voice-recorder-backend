@@ -219,24 +219,28 @@ pub async fn security_middleware(
     let latency = start.elapsed();
     let status_code = response.status();
 
-    if status_code.is_server_error() {
-        error!(
-            "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
-            status_code.as_u16(),
-            latency
-        );
-    } else if status_code.is_client_error() {
-        warn!(
-            "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
-            status_code.as_u16(),
-            latency
-        );
-    } else {
-        info!(
-            "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
-            status_code.as_u16(),
-            latency
-        );
+    let is_health_check = path.starts_with("/api/v1/health") && status_code.is_success();
+
+    if !is_health_check {
+        if status_code.is_server_error() {
+            error!(
+                "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
+                status_code.as_u16(),
+                latency
+            );
+        } else if status_code.is_client_error() {
+            warn!(
+                "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
+                status_code.as_u16(),
+                latency
+            );
+        } else {
+            info!(
+                "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
+                status_code.as_u16(),
+                latency
+            );
+        }
     }
 
     // Heuristic probe tracker (400, 404, 405)
