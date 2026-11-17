@@ -16,3 +16,7 @@ __pycache__/
 *.egg-info/
 .coverage
 htmlcov/
+
+# Future ideas / planning documents
+docs/FUTURE_IDEAS.md
+docs/future_ideas*
