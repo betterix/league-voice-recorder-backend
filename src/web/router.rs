@@ -148,16 +148,19 @@ pub async fn get_web_recordings(
 
     let items: Vec<RecordingMetadataResponse> = rows.into_iter().map(Into::into).collect();
 
-    let (total_b, used_b, free_b) = match sysinfo::Disks::new_with_refreshed_list()
-        .iter()
-        .find(|d| state.config.storage_dir.starts_with(d.mount_point()))
-    {
-        Some(disk) => (
-            disk.total_space(),
-            disk.total_space().saturating_sub(disk.available_space()),
-            disk.available_space(),
-        ),
-        None => (0, 0, 0),
+    let (total_b, used_b, free_b) = match sysinfo::Disks::new_with_refreshed_list() {
+        Ok(disks) => match disks
+            .iter()
+            .find(|d| state.config.storage_dir.starts_with(d.mount_point()))
+        {
+            Some(disk) => (
+                disk.total_space(),
+                disk.total_space().saturating_sub(disk.available_space()),
+                disk.available_space(),
+            ),
+            None => (0, 0, 0),
+        },
+        Err(_) => (0, 0, 0),
     };
 
     let blocked_ips_val = state.rate_limiter.get_blocked_ips();

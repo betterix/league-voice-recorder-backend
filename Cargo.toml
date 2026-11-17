@@ -9,15 +9,14 @@ description = "High-performance centralized remote audio storage service for Lea
 [dependencies]
 tokio = { version = "1.42", features = ["full"] }
 axum = { version = "0.8", features = ["multipart", "matched-path"] }
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+axum-server = { version = "0.9", features = ["tls-rustls"] }
 rustls = { version = "0.23", features = ["ring"] }
 tower = { version = "0.5", features = ["util"] }
-tower-http = { version = "0.6", features = ["cors", "trace", "set-header", "timeout"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "chrono", "macros"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "chrono", "macros"] }
 chrono = { version = "0.4", features = ["serde"] }
-sha2 = "0.10"
+sha2 = "0.11"
 hex = "0.4"
 subtle = "2.6"
 regex = "1.11"
@@ -25,10 +24,10 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 uuid = { version = "1.11", features = ["v4", "fast-rng"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time", "fmt"] }
-rcgen = "0.13"
+rcgen = "0.14"
 dashmap = "6.1"
-base64 = "0.22"
-sysinfo = "0.33"
+base64 = "0.23"
+sysinfo = "0.40"
 futures-util = "0.3"
 tokio-util = { version = "0.7", features = ["io"] }
 dotenvy = "0.15"
