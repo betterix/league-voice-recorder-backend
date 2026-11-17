@@ -1,9 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="1024" height="1024">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="#0A1828" />
-      <stop offset="100%" stop-color="#020810" />
-    </radialGradient>
     <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFF3D6" />
       <stop offset="45%" stop-color="#C8AA6E" />
@@ -21,8 +17,8 @@
     </radialGradient>
   </defs>
 
-  <!-- Outer Hextech Octagon Badge -->
-  <polygon points="75,10 181,10 246,75 246,181 181,246 75,246 10,181 10,75" fill="url(#bg)" stroke="url(#gold)" stroke-width="12" stroke-linejoin="round" />
+  <!-- Outer Hextech Octagon Badge (Transparent background) -->
+  <polygon points="75,10 181,10 246,75 246,181 181,246 75,246 10,181 10,75" fill="none" stroke="url(#gold)" stroke-width="12" stroke-linejoin="round" />
   <polygon points="81,24 175,24 232,81 232,175 175,232 81,232 24,175 24,81" fill="none" stroke="#0AC8B9" stroke-width="2.5" opacity="0.5" stroke-linejoin="round" />
 
   <!-- Outer Cyan Glow Aura (Filter-free so it never disappears!) -->
