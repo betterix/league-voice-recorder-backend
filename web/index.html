@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>League Voice Recorder • Documentation Hub</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="alternate icon" type="image/x-icon" href="assets/icon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icon.png">
-  <link rel="shortcut icon" href="assets/icon.ico">
   <script src="assets/mermaid.min.js"></script>
   <style>
     :root {
@@ -75,22 +75,33 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
-    .brand-icon {
-      width: 36px;
-      height: 36px;
+    .brand-logo-wrap {
+      width: 40px;
+      height: 40px;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: transparent;
     }
 
-    .brand-icon img {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      box-shadow: 0 0 12px rgba(10, 200, 185, 0.35);
+    .brand-logo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(10, 200, 185, 0.45));
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    .brand-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .brand-title {
@@ -108,7 +119,6 @@
       color: var(--primary);
       border-radius: 9999px;
       font-weight: 600;
-      margin-left: 6px;
     }
 
     .header-actions {
@@ -496,10 +506,10 @@
 
   <header>
     <div class="brand">
-      <div class="brand-icon">
-        <img src="assets/icon.svg" alt="League Voice Recorder">
+      <div class="brand-logo-wrap">
+        <img src="assets/icon.svg" alt="League Voice Recorder Logo" class="brand-logo">
       </div>
-      <div>
+      <div class="brand-text">
         <span class="brand-title">League Voice Recorder</span>
         <span class="brand-pill">Docs Hub v1.3.1</span>
       </div>
