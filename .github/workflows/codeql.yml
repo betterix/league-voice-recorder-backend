@@ -1,10 +1,7 @@
 name: "CodeQL Analysis"
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
   schedule:
     - cron: '30 2 * * 0'
 
