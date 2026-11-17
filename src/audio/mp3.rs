@@ -32,6 +32,9 @@ const MPEG1_SAMPLE_RATES: [u32; 4] = [44100, 48000, 32000, 0];
 const MPEG2_SAMPLE_RATES: [u32; 4] = [22050, 24000, 16000, 0];
 const MPEG25_SAMPLE_RATES: [u32; 4] = [11025, 12000, 8000, 0];
 
+const STREAM_CHUNK_SIZE: usize = 64 * 1024; // 64 KB bounded buffer
+
+/// Parses MP3 frame headers in streaming chunks with seeking to bound memory usage to <= 64 KB.
 pub fn parse_mp3_file(path: &Path) -> Result<AudioInfo, AudioError> {
     let mut file = File::open(path)?;
     let metadata = file.metadata()?;
@@ -56,25 +59,35 @@ pub fn parse_mp3_file(path: &Path) -> Result<AudioInfo, AudioError> {
 
     file.seek(SeekFrom::Start(offset))?;
 
-    // Read remaining audio data
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-
-    if buffer.is_empty() {
-        return Err(AudioError::InvalidMp3(
-            "No audio data found after ID3 header".into(),
-        ));
-    }
-
-    let mut cursor = 0;
+    let mut buf = Vec::with_capacity(STREAM_CHUNK_SIZE);
     let mut frame_count = 0u64;
     let mut total_bitrate = 0u64;
     let mut first_sample_rate = 0u32;
     let mut first_bitrate = 0u32;
+    let mut cursor = 0;
 
-    while cursor + 4 <= buffer.len() {
-        let b0 = buffer[cursor];
-        let b1 = buffer[cursor + 1];
+    loop {
+        // If remaining in buffer is less than 4 bytes, refill from file
+        if cursor + 4 > buf.len() {
+            if cursor < buf.len() {
+                buf.drain(..cursor);
+            } else {
+                buf.clear();
+            }
+            cursor = 0;
+
+            let prev_len = buf.len();
+            buf.resize(STREAM_CHUNK_SIZE, 0);
+            let bytes_read = file.read(&mut buf[prev_len..])?;
+            buf.truncate(prev_len + bytes_read);
+
+            if buf.len() < 4 {
+                break;
+            }
+        }
+
+        let b0 = buf[cursor];
+        let b1 = buf[cursor + 1];
 
         // Frame sync: 11 bits set (0xFF followed by 0b111x_xxxx)
         if b0 == 0xFF && (b1 & 0xE0) == 0xE0 {
@@ -82,7 +95,7 @@ pub fn parse_mp3_file(path: &Path) -> Result<AudioInfo, AudioError> {
             let layer_id = (b1 >> 1) & 0x03; // 1 = Layer III
 
             if layer_id == 1 && version_id != 1 {
-                let b2 = buffer[cursor + 2];
+                let b2 = buf[cursor + 2];
                 let bitrate_idx = ((b2 >> 4) & 0x0F) as usize;
                 let sample_rate_idx = ((b2 >> 2) & 0x03) as usize;
                 let padding = ((b2 >> 1) & 0x01) as u32;
@@ -100,22 +113,32 @@ pub fn parse_mp3_file(path: &Path) -> Result<AudioInfo, AudioError> {
                 };
 
                 if bitrate > 0 && sample_rate > 0 {
-                    let _samples_per_frame: u32 = if version_id == 3 { 1152 } else { 576 };
                     let frame_length = if version_id == 3 {
                         ((144 * bitrate) / sample_rate) + padding
                     } else {
                         ((72 * bitrate) / sample_rate) + padding
                     } as usize;
 
-                    if frame_length > 4 && cursor + frame_length <= buffer.len() {
+                    if frame_length > 4 {
                         if frame_count == 0 {
                             first_sample_rate = sample_rate;
                             first_bitrate = bitrate;
                         }
                         frame_count += 1;
                         total_bitrate += bitrate as u64;
-                        cursor += frame_length;
-                        continue;
+
+                        if cursor + frame_length <= buf.len() {
+                            cursor += frame_length;
+                            continue;
+                        } else {
+                            // Skip past remainder of this frame via file seek
+                            let remaining_in_buf = buf.len() - cursor;
+                            let to_skip = frame_length - remaining_in_buf;
+                            file.seek(SeekFrom::Current(to_skip as i64))?;
+                            buf.clear();
+                            cursor = 0;
+                            continue;
+                        }
                     }
                 }
             }

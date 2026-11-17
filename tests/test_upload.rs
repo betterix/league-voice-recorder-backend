@@ -9,6 +9,39 @@ use sha2::{Digest, Sha256};
 use common::{build_multipart, generate_valid_mp3_bytes, TestApp, TEST_PULL_KEY, TEST_UPLOAD_KEY};
 
 #[tokio::test]
+async fn test_large_mp3_streaming_upload() {
+    let app = common::TestApp::new().await;
+    // Generate a ~3 MB valid MP3 stream (exceeds default 2MB Axum limit)
+    let data = common::generate_valid_mp3_bytes(7200);
+    let (body_bytes, content_type) = common::build_multipart(&[
+        ("file", Some("scrim_large.mp3"), &data),
+        ("team_tag", None, b"T1"),
+        ("notes", None, b"Large streaming test"),
+    ]);
+
+    let req = axum::http::Request::builder()
+        .method("POST")
+        .uri("/api/v1/recordings/8018190999")
+        .header("X-API-Key", common::TEST_UPLOAD_KEY)
+        .header("Content-Type", &content_type)
+        .body(axum::body::Body::from(body_bytes))
+        .unwrap();
+
+    let resp = app.request(req).await;
+    assert_eq!(resp.status(), axum::http::StatusCode::CREATED);
+    let body_str = String::from_utf8(
+        http_body_util::BodyExt::collect(resp.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    println!("large upload body: {}", body_str);
+    assert!(body_str.contains("8018190999"));
+}
+
+#[tokio::test]
 async fn test_upload_success_and_permissions() {
     let app = TestApp::new().await;
     let mp3_bytes = generate_valid_mp3_bytes(15);

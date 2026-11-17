@@ -326,10 +326,11 @@ pub async fn upload_recording(
             )
             .await
             .map_err(|e| {
+                let err_str = e.to_string();
                 let resp: Response = e.into_response();
                 (
                     resp.status(),
-                    Json(serde_json::json!({ "detail": "Upload failed" })),
+                    Json(serde_json::json!({ "detail": err_str })),
                 )
             })?;
             upload_processed = Some(res);

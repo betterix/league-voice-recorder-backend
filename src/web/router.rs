@@ -1,4 +1,4 @@
-use axum::extract::{Multipart, Path as AxumPath, Query, State};
+use axum::extract::{Extension, Multipart, Path as AxumPath, Query, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
@@ -9,7 +9,7 @@ use crate::audio::storage::{
 };
 use crate::db::models::{now_iso, IPActivity, Recording, RecordingMetadataResponse};
 use crate::web::auth::{extract_basic_auth, is_web_ip_allowed, verify_basic_auth};
-use crate::AppState;
+use crate::{AppState, ClientIp};
 
 const DASHBOARD_HTML: &str = include_str!("dashboard.html");
 
@@ -107,9 +107,9 @@ fn escape_html(input: &str) -> String {
 
 pub async fn get_dashboard_ui(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
 ) -> Result<Response, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     let username = check_web_auth(&client_ip, &headers, &state).await?;
 
     let rendered = DASHBOARD_HTML
@@ -129,9 +129,9 @@ pub async fn get_dashboard_ui(
 
 pub async fn get_web_recordings(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let rows = sqlx::query_as::<_, Recording>(
@@ -175,9 +175,9 @@ pub async fn get_web_recordings(
 
 pub async fn get_blocked_ips(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let ips = state.rate_limiter.get_blocked_ips();
@@ -186,10 +186,10 @@ pub async fn get_blocked_ips(
 
 pub async fn unblock_banned_ip(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     AxumPath(ip): AxumPath<String>,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let unblocked = state.rate_limiter.unblock_ip(Some(&state.db), &ip).await;
@@ -210,11 +210,11 @@ pub async fn unblock_banned_ip(
 
 pub async fn manual_ban_ip(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     AxumPath(ip): AxumPath<String>,
     payload: Option<Json<BanIPPayload>>,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let reason = payload
@@ -236,10 +236,10 @@ pub async fn manual_ban_ip(
 
 pub async fn get_ip_activity(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     Query(query): Query<ActivityQuery>,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let limit = query.limit.clamp(1, 200);
@@ -374,10 +374,10 @@ pub async fn get_ip_activity(
 
 pub async fn web_download_recording(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     AxumPath(game_id): AxumPath<String>,
 ) -> Result<Response, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let clean_id = validate_game_id(&game_id)
@@ -391,10 +391,10 @@ pub async fn web_download_recording(
 
 pub async fn web_stream_recording(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     AxumPath(game_id): AxumPath<String>,
 ) -> Result<Response, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let clean_id = validate_game_id(&game_id)
@@ -408,11 +408,11 @@ pub async fn web_stream_recording(
 
 pub async fn web_upload_recording(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     AxumPath(game_id): AxumPath<String>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<RecordingMetadataResponse>), Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let clean_id = validate_game_id(&game_id)
@@ -539,10 +539,10 @@ pub async fn web_upload_recording(
 
 pub async fn web_delete_recording(
     State(state): State<AppState>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     headers: HeaderMap,
     AxumPath(game_id): AxumPath<String>,
 ) -> Result<Json<serde_json::Value>, Response> {
-    let client_ip = get_client_ip_from_headers(&headers);
     check_web_auth(&client_ip, &headers, &state).await?;
 
     let clean_id = validate_game_id(&game_id)
@@ -558,13 +558,4 @@ pub async fn web_delete_recording(
         "message": format!("Recording '{clean_id}' successfully deleted"),
         "game_id": clean_id,
     })))
-}
-
-pub fn get_client_ip_from_headers(headers: &HeaderMap) -> String {
-    // In direct-port architecture, we can check custom internal client IP header if passed,
-    // or fallback to 127.0.0.1
-    if let Some(ip) = headers.get("x-real-ip").and_then(|v| v.to_str().ok()) {
-        return ip.trim().to_string();
-    }
-    "127.0.0.1".to_string()
 }

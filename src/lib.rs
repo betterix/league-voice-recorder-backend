@@ -8,8 +8,8 @@ pub mod db;
 pub mod security;
 pub mod web;
 
-use axum::extract::{ConnectInfo, Request, State};
-use axum::http::{header, HeaderMap, StatusCode};
+use axum::extract::{ConnectInfo, DefaultBodyLimit, Extension, Request, State};
+use axum::http::{header, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
@@ -33,6 +33,9 @@ pub struct AppState {
     pub ip_intel: IPIntelService,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClientIp(pub String);
+
 pub fn get_client_ip(req: &Request, info: Option<ConnectInfo<SocketAddr>>) -> String {
     if let Some(connect_info) = info {
         return connect_info.0.ip().to_string();
@@ -45,11 +48,12 @@ pub fn get_client_ip(req: &Request, info: Option<ConnectInfo<SocketAddr>>) -> St
 
 pub async fn security_middleware(
     State(state): State<AppState>,
-    req: Request,
+    mut req: Request,
     next: Next,
 ) -> Response {
     let connect_info = req.extensions().get::<ConnectInfo<SocketAddr>>().cloned();
     let client_ip = get_client_ip(&req, connect_info);
+    req.extensions_mut().insert(ClientIp(client_ip.clone()));
 
     let path = req.uri().path().to_string();
     let method = req.method().as_str().to_string();
@@ -261,13 +265,10 @@ pub async fn security_middleware(
 
 pub async fn root_handler(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
 ) -> Result<Redirect, (StatusCode, &'static str)> {
-    if state.config.web_enabled {
-        let client_ip = crate::web::router::get_client_ip_from_headers(&headers);
-        if is_web_ip_allowed(&client_ip, &state.config.web_allowed_ips) {
-            return Ok(Redirect::temporary("/web"));
-        }
+    if state.config.web_enabled && is_web_ip_allowed(&client_ip, &state.config.web_allowed_ips) {
+        return Ok(Redirect::temporary("/web"));
     }
     Err((StatusCode::NOT_FOUND, "Not Found"))
 }
@@ -286,9 +287,12 @@ pub fn create_app(state: AppState) -> Router {
         app = app.nest("/web", web::router());
     }
 
-    app.layer(middleware::from_fn_with_state(
-        state.clone(),
-        security_middleware,
-    ))
-    .with_state(state)
+    let max_upload_bytes = state.config.max_upload_bytes();
+
+    app.layer(DefaultBodyLimit::max(max_upload_bytes))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            security_middleware,
+        ))
+        .with_state(state)
 }
