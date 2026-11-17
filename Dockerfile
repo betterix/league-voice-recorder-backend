@@ -23,7 +23,7 @@ RUN cargo build --release && \
 # =============================================================================
 # Stage 2: Hardened Minimal Production Runtime
 # =============================================================================
-FROM alpine:3.21
+FROM alpine:3.24
 
 LABEL org.opencontainers.image.title="League Voice Recorder Backend" \
     org.opencontainers.image.description="High-performance centralized direct-port scrim audio backend for League Voice Recorder" \
