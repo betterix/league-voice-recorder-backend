@@ -16,6 +16,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tracing::{error, info, warn};
 
 use crate::bot_shield::IPIntelService;
 use crate::config::Config;
@@ -63,6 +64,7 @@ pub async fn security_middleware(
     } else {
         format!("{path}?{query}")
     };
+    let start = std::time::Instant::now();
 
     let is_trusted = is_trusted_ip(&client_ip, &state.config.web_allowed_ips);
 
@@ -71,6 +73,11 @@ pub async fn security_middleware(
     if is_blocked {
         let reason = state.rate_limiter.get_block_reason(&client_ip);
         let status = StatusCode::TOO_MANY_REQUESTS;
+        let latency = start.elapsed();
+        warn!(
+            "{client_ip} - \"{method} {full_target}\" 429 Too Many Requests ({:.2?}) - IP temporarily blocked ({remaining}s remaining, reason: {reason})",
+            latency
+        );
         let body = serde_json::json!({
             "detail": format!("Too many failed requests. IP temporarily blocked. Try again in {remaining} seconds. Reason: {reason}")
         });
@@ -93,6 +100,12 @@ pub async fn security_middleware(
             .rate_limiter
             .ban_ip_permanent(Some(&state.db), &client_ip, &reason)
             .await;
+
+        let latency = start.elapsed();
+        warn!(
+            "{client_ip} - \"{method} {full_target}\" 403 Forbidden ({:.2?}) - Scanner probe detected and IP permanently banned: {reason}",
+            latency
+        );
 
         log_activity_event(
             &state.db,
@@ -126,6 +139,7 @@ pub async fn security_middleware(
     };
 
     if is_invalid_api_key {
+        warn!("{client_ip} - \"{method} {full_target}\" - Authentication failure: Invalid API key");
         state
             .rate_limiter
             .record_auth_failure(
@@ -144,6 +158,12 @@ pub async fn security_middleware(
             .is_datacenter_ip(Some(&state.db), &client_ip)
             .await;
         if is_dc {
+            let latency = start.elapsed();
+            warn!(
+                "{client_ip} - \"{method} {full_target}\" 403 Forbidden ({:.2?}) - Datacenter/VPS bot traffic blocked: {provider}",
+                latency
+            );
+
             log_activity_event(
                 &state.db,
                 &client_ip,
@@ -178,6 +198,11 @@ pub async fn security_middleware(
         .check_rate_limit(&client_ip, category, limit, 60.0);
 
     if !allowed {
+        let latency = start.elapsed();
+        warn!(
+            "{client_ip} - \"{method} {full_target}\" 429 Too Many Requests ({:.2?}) - Rate limit exceeded: category={category}, retry_after={retry_after}s",
+            latency
+        );
         return (
             StatusCode::TOO_MANY_REQUESTS,
             [
@@ -191,7 +216,28 @@ pub async fn security_middleware(
 
     // Call inner handler
     let response = next.run(req).await;
+    let latency = start.elapsed();
     let status_code = response.status();
+
+    if status_code.is_server_error() {
+        error!(
+            "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
+            status_code.as_u16(),
+            latency
+        );
+    } else if status_code.is_client_error() {
+        warn!(
+            "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
+            status_code.as_u16(),
+            latency
+        );
+    } else {
+        info!(
+            "{client_ip} - \"{method} {full_target}\" {} ({:.2?})",
+            status_code.as_u16(),
+            latency
+        );
+    }
 
     // Heuristic probe tracker (400, 404, 405)
     if (status_code == StatusCode::NOT_FOUND

@@ -3,6 +3,7 @@ use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
+use tracing::warn;
 
 use crate::audio::storage::{
     build_range_download_response, delete_recording_file, stream_save_upload, validate_game_id,
@@ -41,6 +42,9 @@ async fn check_web_auth(
 
     // 1. IP Whitelist - cloak with 404 for unauthorized IPs
     if !is_web_ip_allowed(client_ip, &state.config.web_allowed_ips) {
+        warn!(
+            "{client_ip} - Unauthorized IP attempted to access cloaked web dashboard (cloaked 404)"
+        );
         return Err((StatusCode::NOT_FOUND, "Not Found").into_response());
     }
 
@@ -63,6 +67,7 @@ async fn check_web_auth(
             if verify_basic_auth(&user, &pass, &state.config) {
                 Ok(user)
             } else {
+                warn!("{client_ip} - Web dashboard Basic Auth failed for user '{user}'");
                 state
                     .rate_limiter
                     .record_auth_failure(

@@ -3,6 +3,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::audio::storage::{
     build_range_download_response, delete_recording_file, stream_save_upload, validate_game_id,
@@ -252,6 +253,7 @@ pub async fn download_recording(
     }
 
     let range_hdr = headers.get("range").and_then(|v| v.to_str().ok());
+    info!("Streaming download requested: game_id={clean_id}, range={range_hdr:?}");
     build_range_download_response(&clean_id, range_hdr, &state.config.storage_dir, false)
         .await
         .map_err(|e| {
@@ -416,6 +418,14 @@ pub async fn upload_recording(
         sha256: processed.sha256,
     };
 
+    info!(
+        "Uploaded recording: game_id={}, size={} bytes, duration={:.2}s, team_tag={}",
+        metadata.game_id,
+        metadata.file_size,
+        metadata.duration,
+        metadata.team_tag.as_deref().unwrap_or("none")
+    );
+
     Ok((StatusCode::CREATED, Json(metadata)))
 }
 
@@ -457,6 +467,8 @@ pub async fn delete_recording(
         .bind(&clean_id)
         .execute(&state.db)
         .await;
+
+    info!("Deleted recording from database and disk: game_id={clean_id}");
 
     Ok(Json(MessageResponse {
         message: format!("Recording '{clean_id}' successfully deleted"),

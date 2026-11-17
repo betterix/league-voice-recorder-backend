@@ -1,8 +1,7 @@
 use axum_server::tls_rustls::RustlsConfig;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tracing::{info, warn, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing::{info, warn};
 
 use league_voice_recorder_backend::bot_shield::IPIntelService;
 use league_voice_recorder_backend::config::Config;
@@ -16,10 +15,9 @@ use league_voice_recorder_backend::{create_app, AppState};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)?;
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let config = Config::from_env().map_err(|e| format!("Configuration error: {e}"))?;
     config.ensure_directories()?;
