@@ -27,9 +27,9 @@ FROM alpine:3.24
 
 LABEL org.opencontainers.image.title="League Voice Recorder Backend" \
     org.opencontainers.image.description="High-performance centralized direct-port scrim audio backend for League Voice Recorder" \
-    org.opencontainers.image.version="1.2.1" \
-    org.opencontainers.image.authors="League Voice Recorder Team" \
-    org.opencontainers.image.licenses="GPL-3.0"
+    org.opencontainers.image.version="1.3.0" \
+    org.opencontainers.image.authors="Betterix" \
+    org.opencontainers.image.licenses="AGPL-3.0"
 
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache \

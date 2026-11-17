@@ -16,26 +16,24 @@ jobs:
 
     steps:
       - name: 📥 Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: ⚡ Set up uv & Python 3.14
-        uses: astral-sh/setup-uv@v7
+      - name: ⚡ Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          enable-cache: true
-          python-version: "3.14"
+          components: clippy, rustfmt
 
-      - name: 📦 Install dependencies
-        run: |
-          uv sync --extra dev
+      - name: 📦 Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
 
-      - name: 🔍 Lint & Code Format Check
-        run: |
-          uv run ruff check .
-          uv run ruff format --check .
+      - name: 🔍 Check Code Formatting
+        run: cargo fmt --check
 
-      - name: 🧪 Execute Pytest Suite
-        run: |
-          uv run pytest -v
+      - name: 🛡️ Clippy Linter Check
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: 🧪 Execute Cargo Test Suite
+        run: cargo test --verbose
 
   build-and-push:
     name: 🐳 Build & Push Multi-Arch Image (amd64 / arm64)
@@ -44,18 +42,18 @@ jobs:
 
     steps:
       - name: 📥 Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: 🛠️ Set up QEMU (amd64 & arm64)
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: linux/amd64,linux/arm64
 
       - name: 🐳 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: 🔑 Log in to GitHub Container Registry (GHCR)
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -63,7 +61,7 @@ jobs:
 
       - name: 🏷️ Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -71,7 +69,7 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: 🚀 Build & Push Multi-Arch Docker Image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64

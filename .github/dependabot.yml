@@ -10,15 +10,15 @@ multi-ecosystem-groups:
       - "dependencies"
 
 updates:
-  # Python dependencies (pyproject.toml & requirements.txt)
-  - package-ecosystem: "pip"
+  # Rust Cargo dependencies (Cargo.toml & Cargo.lock)
+  - package-ecosystem: "cargo"
     directory: "/"
     multi-ecosystem-group: "all-updates"
     patterns:
       - "*"
     labels:
       - "dependencies"
-      - "python"
+      - "rust"
 
   # GitHub Actions workflow actions
   - package-ecosystem: "github-actions"
