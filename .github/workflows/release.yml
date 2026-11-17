@@ -36,18 +36,13 @@ jobs:
         run: cargo test --verbose
 
   build-and-push:
-    name: 🐳 Build & Push Multi-Arch Image (amd64 / arm64)
+    name: 🐳 Build & Push Release Image (amd64)
     needs: test
     runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Check out repository
         uses: actions/checkout@v7
-
-      - name: 🛠️ Set up QEMU (amd64 & arm64)
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: linux/amd64,linux/arm64
 
       - name: 🐳 Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -68,11 +63,11 @@ jobs:
             type=raw,value=latest
             type=semver,pattern={{version}}
 
-      - name: 🚀 Build & Push Multi-Arch Docker Image
+      - name: 🚀 Build & Push Docker Image (amd64)
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
