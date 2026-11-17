@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0A1828" />
+      <stop offset="100%" stop-color="#020810" />
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3D6" />
+      <stop offset="45%" stop-color="#C8AA6E" />
+      <stop offset="100%" stop-color="#6B4E1B" />
+    </linearGradient>
+    <linearGradient id="cyan" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#006699" />
+      <stop offset="50%" stop-color="#0AC8B9" />
+      <stop offset="100%" stop-color="#E0FFFF" />
+    </linearGradient>
+    <radialGradient id="ruby" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FF6B6B" />
+      <stop offset="50%" stop-color="#D90429" />
+      <stop offset="100%" stop-color="#640D14" />
+    </radialGradient>
+  </defs>
+
+  <!-- Outer Hextech Octagon Badge -->
+  <polygon points="75,10 181,10 246,75 246,181 181,246 75,246 10,181 10,75" fill="url(#bg)" stroke="url(#gold)" stroke-width="12" stroke-linejoin="round" />
+  <polygon points="81,24 175,24 232,81 232,175 175,232 81,232 24,175 24,81" fill="none" stroke="#0AC8B9" stroke-width="2.5" opacity="0.5" stroke-linejoin="round" />
+
+  <!-- Outer Cyan Glow Aura (Filter-free so it never disappears!) -->
+  <g stroke="#0AC8B9" stroke-linecap="round" stroke-width="18" opacity="0.25">
+    <line x1="46" y1="110" x2="46" y2="146" />
+    <line x1="68" y1="86" x2="68" y2="170" />
+    <line x1="188" y1="86" x2="188" y2="170" />
+    <line x1="210" y1="110" x2="210" y2="146" />
+  </g>
+
+  <!-- Crisp Cyan Soundwaves -->
+  <g stroke="url(#cyan)" stroke-linecap="round" stroke-width="10">
+    <line x1="46" y1="110" x2="46" y2="146" />
+    <line x1="68" y1="86" x2="68" y2="170" />
+    <line x1="188" y1="86" x2="188" y2="170" />
+    <line x1="210" y1="110" x2="210" y2="146" />
+  </g>
+
+  <!-- Microphone Body -->
+  <rect x="92" y="42" width="72" height="116" rx="36" fill="url(#gold)" stroke="#020810" stroke-width="4" />
+  
+  <!-- Microphone Grille Slots -->
+  <g fill="#0A1828">
+    <rect x="100" y="68" width="20" height="8" rx="4" />
+    <rect x="136" y="68" width="20" height="8" rx="4" />
+    <rect x="100" y="84" width="20" height="8" rx="4" />
+    <rect x="136" y="84" width="20" height="8" rx="4" />
+    <rect x="100" y="100" width="20" height="8" rx="4" />
+    <rect x="136" y="100" width="20" height="8" rx="4" />
+  </g>
+
+  <!-- Microphone Stand & U-Mount (Using explicit rect so the stem never vanishes) -->
+  <path d="M 76 124 A 52 52 0 0 0 180 124" fill="none" stroke="url(#gold)" stroke-width="12" stroke-linecap="round" />
+  <rect x="120" y="172" width="16" height="44" fill="url(#gold)" />
+  <polygon points="88,212 168,212 180,228 76,228" fill="url(#gold)" />
+
+  <!-- Center Shield & Crimson Recording Gem -->
+  <polygon points="128,104 156,136 128,168 100,136" fill="url(#gold)" stroke="#020810" stroke-width="3" />
+  <polygon points="128,112 146,136 128,160 110,136" fill="url(#ruby)" stroke="#FFF3D6" stroke-width="1.5" />
+</svg>

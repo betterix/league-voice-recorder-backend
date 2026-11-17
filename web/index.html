@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>League Voice Recorder • Documentation Hub</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon.png">
+  <link rel="shortcut icon" href="assets/icon.ico">
+  <script src="assets/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --bg-sidebar: #0d121f;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --card-hover: #182235;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --accent: #06b6d4;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --code-bg: #0d1322;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scrollbar-width: thin;
+      scrollbar-color: #1f293d var(--bg-dark);
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f293d;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background-color: var(--bg-sidebar);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-icon img {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(10, 200, 185, 0.35);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #fff;
+    }
+
+    .brand-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--primary);
+      border-radius: 9999px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 5px 12px;
+      border-radius: 6px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 6px var(--primary);
+    }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 290px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .search-box {
+      padding: 14px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .nav-section {
+      padding: 16px 14px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      margin: 2px 8px;
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .nav-link:hover {
+      background: var(--card-bg);
+      color: #fff;
+    }
+
+    .nav-link.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      font-weight: 600;
+      border-left: 3px solid var(--primary);
+    }
+
+    .content-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 56px 80px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .doc-page {
+      display: none;
+    }
+
+    .doc-page.active {
+      display: block;
+      animation: fadeIn 0.18s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .doc-header-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .category-tag {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .file-path {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .center-block {
+      text-align: center;
+      margin: 24px 0;
+      padding: 16px;
+      background: rgba(17, 24, 39, 0.4);
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .center-block p {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .center-block img {
+      height: 22px;
+      vertical-align: middle;
+      border-radius: 4px;
+      transition: transform 0.15s ease;
+    }
+
+    .center-block img:hover {
+      transform: translateY(-1px);
+    }
+
+    /* Markdown Styling */
+    .markdown-body h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 16px 0 20px;
+      color: #ffffff;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+
+    .markdown-body h2 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 36px 0 16px;
+      color: #f3f4f6;
+      border-bottom: 1px solid rgba(31, 41, 61, 0.6);
+      padding-bottom: 8px;
+    }
+
+    .markdown-body h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 24px 0 12px;
+      color: #e5e7eb;
+    }
+
+    .markdown-body p {
+      margin-bottom: 16px;
+      font-size: 15px;
+      color: #d1d5db;
+      line-height: 1.75;
+    }
+
+    .markdown-body ul, .markdown-body ol {
+      margin: 14px 0 18px 24px;
+      font-size: 15px;
+      color: #d1d5db;
+    }
+
+    .markdown-body li {
+      margin-bottom: 7px;
+    }
+
+    .markdown-body strong {
+      color: #fff;
+    }
+
+    .markdown-body a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .markdown-body a:hover {
+      text-decoration: underline;
+      color: #38bdf8;
+    }
+
+    .markdown-body hr {
+      border: 0;
+      border-top: 1px solid var(--card-border);
+      margin: 32px 0;
+    }
+
+    .markdown-body blockquote {
+      border-left: 4px solid var(--accent);
+      background: rgba(6, 182, 212, 0.07);
+      padding: 14px 18px;
+      margin: 20px 0;
+      border-radius: 0 8px 8px 0;
+      color: #e2e8f0;
+      font-size: 14.5px;
+    }
+
+    /* Code Blocks & Copiable Wrappers */
+    .code-block-wrapper {
+      position: relative;
+      margin: 20px 0;
+    }
+
+    .code-copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: rgba(31, 41, 61, 0.85);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+
+    .code-copy-btn:hover {
+      background: var(--card-hover);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .markdown-body pre {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      padding-right: 76px;
+      margin: 0;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #f1f5f9;
+    }
+
+    .markdown-body code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--card-border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #38bdf8;
+    }
+
+    .markdown-body pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Large & Readable Mermaid Diagrams */
+    .mermaid-container {
+      background: #090e1a;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 36px 28px;
+      margin: 32px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: auto;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .mermaid svg {
+      min-width: 780px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .mermaid .node text,
+    .mermaid .nodeLabel,
+    .mermaid .edgeLabel {
+      font-size: 15.5px !important;
+      font-weight: 500 !important;
+      line-height: 1.5 !important;
+    }
+
+    /* Tables */
+    .markdown-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 14px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+
+    .markdown-body th {
+      background: var(--card-bg);
+      color: #fff;
+      font-weight: 600;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .markdown-body td {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--card-border);
+      color: #d1d5db;
+      background: rgba(17, 24, 39, 0.3);
+    }
+
+    .markdown-body tr:last-child td {
+      border-bottom: none;
+    }
+
+    .markdown-body tr:hover td {
+      background: rgba(24, 34, 53, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="assets/icon.svg" alt="League Voice Recorder">
+      </div>
+      <div>
+        <span class="brand-title">League Voice Recorder</span>
+        <span class="brand-pill">Docs Hub v1.3.1</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="badge-status">
+        <div class="status-dot"></div>
+        <span>Pure Rust Axum • 1.35 MiB RAM</span>
+      </div>
+      <div class="badge-status">
+        <span>🔒 Native TLS 1.3</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="search-box">
+        <input type="text" class="search-input" placeholder="🔍 Filter documentation..." onkeyup="filterNav(this.value)">
+      </div>
+      <div class="nav-section">Getting Started</div>
+          <a class="nav-link" id="nav-btn-readme" onclick="showPage('readme')">
+            <span class="nav-icon">🎧</span>
+            <span class="nav-text">README & Overview</span>
+          </a>
+        <div class="nav-section">Core Architecture</div>
+          <a class="nav-link" id="nav-btn-architecture" onclick="showPage('architecture')">
+            <span class="nav-icon">🏗️</span>
+            <span class="nav-text">System Architecture</span>
+          </a>
+        <div class="nav-section">Security & Protection</div>
+          <a class="nav-link" id="nav-btn-security_shield" onclick="showPage('security_shield')">
+            <span class="nav-icon">🛡️</span>
+            <span class="nav-text">Security & Bot Shield</span>
+          </a>
+        <div class="nav-section">Audio Engine</div>
+          <a class="nav-link" id="nav-btn-audio_pipeline" onclick="showPage('audio_pipeline')">
+            <span class="nav-icon">🎵</span>
+            <span class="nav-text">Audio Pipeline & Streaming</span>
+          </a>
+        <div class="nav-section">API Reference</div>
+          <a class="nav-link" id="nav-btn-api_reference" onclick="showPage('api_reference')">
+            <span class="nav-icon">📡</span>
+            <span class="nav-text">REST API Reference</span>
+          </a>
+        <div class="nav-section">Management</div>
+          <a class="nav-link" id="nav-btn-web_dashboard" onclick="showPage('web_dashboard')">
+            <span class="nav-icon">🖥️</span>
+            <span class="nav-text">Cloaked Web Dashboard</span>
+          </a>
+        <div class="nav-section">Operations</div>
+          <a class="nav-link" id="nav-btn-deployment" onclick="showPage('deployment')">
+            <span class="nav-icon">🚢</span>
+            <span class="nav-text">Deployment & Operations</span>
+          </a>
+        <div class="nav-section">Governance</div>
+          <a class="nav-link" id="nav-btn-security_policy" onclick="showPage('security_policy')">
+            <span class="nav-icon">🔒</span>
+            <span class="nav-text">Security Policy (1.3.x)</span>
+          </a>
+        
+          <a class="nav-link" id="nav-btn-contributing" onclick="showPage('contributing')">
+            <span class="nav-icon">🤝</span>
+            <span class="nav-text">Contributing Guidelines</span>
+          </a>
+        
+    </aside>
+
+    <main class="content-pane">
+      
+      <section id="doc-readme" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Getting Started</span>
+          <span class="file-path">README.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>🎧 League Voice Recorder Backend</h1>
+<div class="center-block">
+<p><a href="https://www.rust-lang.org/"><img alt="Rust" src="https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust&amp;logoColor=white" /></a>
+<a href="#doc-readme" onclick="showPage('readme'); return false;"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" /></a>
+<a href="https://github.com/betterix/league-voice-recorder-backend/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/betterix/league-voice-recorder-backend?color=brightgreen&amp;logo=github" /></a>
+<a href="https://github.com/betterix/league-voice-recorder-backend/pkgs/container/league-voice-recorder-backend"><img alt="Docker Multi-Arch" src="https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ED?logo=docker&amp;logoColor=white" /></a>
+<a href="#doc-security_shield" onclick="showPage('security_shield'); return false;"><img alt="Security: TLS 1.3" src="https://img.shields.io/badge/Security-Native%20TLS%201.3-success?logo=shield" /></a>
+<a href="https://github.com/tokio-rs/axum"><img alt="RAM Usage" src="https://img.shields.io/badge/RAM%20Footprint-1.35%20MiB-blueviolet" /></a>
+<a href="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/ci.yml"><img alt="CI Status" src="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/ci.yml/badge.svg" /></a>
+<a href="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/codeql.yml/badge.svg" /></a></p>
+<p><strong>Ultra-fast, ultra-lean, centralized remote audio storage service for the <a href="https://github.com/betterix/league-voice-recorder">League Voice Recorder</a> desktop application.</strong></p>
+<p><em>Engineered by </em><em><a href="https://github.com/betterix">Betterix</a></em><em> in pure Rust with <a href="https://github.com/tokio-rs/axum">Axum</a> and <a href="https://tokio.rs/">Tokio</a>. Built for rock-solid reliability, zero memory leaks, and resilient direct-internet exposure.</em></p>
+<hr />
+<p><a href="#-key-highlights">Key Highlights</a> • <a href="#-supported-versions--security">Supported Versions</a> • <a href="#-quick-start">Quick Start</a> • <a href="#-real-time-access-logging">Access Logging</a> • <a href="#-api-endpoints">API Reference</a> • <a href="#-documentation">Documentation</a> • <a href="#-contributing">Contributing</a> • <a href="#-license">License</a></p>
+<hr />
+</div>
+<h2>⚡ Key Highlights</h2>
+<ul>
+<li>🏎️ <strong>Ultra-Lean Resource Usage</strong>: Operates under <strong>1.35 MiB of resident RAM</strong> in production. Bounded 64 KB chunked streaming guarantees zero memory bloat even when transferring hundreds of megabytes.</li>
+<li>🔒 <strong>Direct-Port Ingress (Native TLS 1.3)</strong>: Binds directly to port <code>8443</code> (TCP) over native HTTPS with OpenSSL AEAD cipher suites (<code>TLS_AES_256_GCM_SHA384</code>, <code>TLS_CHACHA20_POLY1305_SHA256</code>). No Nginx or reverse proxy required.</li>
+<li>🐳 <strong>Native Multi-Architecture OCI Images</strong>: Automatically built and published to GHCR with native hardware compilation for both <strong><code>linux/amd64</code></strong> and <strong><code>linux/arm64</code></strong> without emulation slowdowns.</li>
+<li>📊 <strong>Real-Time Structured Access Logging</strong>: Immediate terminal visibility into incoming traffic (client IP, HTTP method, target route, HTTP status, and μs/ms latency) paired with automated <strong>healthcheck noise suppression</strong> to keep Docker logs clean.</li>
+<li>🛡️ <strong>Three-Tier Constant-Time Authentication</strong>:</li>
+<li><code>UPLOAD_KEY</code>: Client recording uploaders (Upload, Download, List, Metadata).</li>
+<li><code>PULL_KEY</code>: Analysts, coaches, and review tools (Download, List, Metadata).</li>
+<li><code>ADMIN_KEY</code>: Full administrative permissions, bans, and purges.</li>
+<li>All token comparisons execute in constant time (<code>subtle::ConstantTimeEq</code>) to eliminate timing attacks.</li>
+<li>🤖 <strong>Automated Bot Shield &amp; Exploit Defense</strong>:</li>
+<li><strong>Zero-Tolerance Scanner Traps</strong>: Instant permanent IP ban on probe signatures (<code>/.env</code>, <code>/.git</code>, <code>/actuator</code>, <code>/console</code>, <code>PROPFIND</code>).</li>
+<li><strong>Heuristic Error Ban</strong>: Automatically blacklists scanning hosts exceeding error thresholds (5 invalid requests in 60s).</li>
+<li><strong>Hybrid VPS / Datacenter Bot Defense</strong>: Blocks automated scraping crawlers from cloud datacenters (AWS, DigitalOcean, Hetzner, OVH, Linode) while allowing genuine API clients.</li>
+<li><strong>Brute-Force Protection</strong>: 5 failed auth attempts trigger an instant 10-minute firewall block across all endpoints.</li>
+<li>🎵 <strong>Pure Rust MPEG-1 Layer 3 Audio Engine</strong>: Pure-Rust frame parser validates audio stream integrity and extracts playback duration, bitrate, and sample rate with zero C dependencies.</li>
+<li>⏯️ <strong>Resumable HTTP Range Streaming</strong>: Full <code>206 Partial Content</code> support for seamless streaming into VLC, media players, or resuming interrupted network transfers.</li>
+<li>💾 <strong>Hardened SQLite WAL Storage</strong>: SQLite backend configured with Write-Ahead Logging (<code>WAL</code>), <code>synchronous=NORMAL</code>, and 30-second busy timeout for high-concurrency read/write safety.</li>
+<li>🕵️ <strong>Cloaked Embedded Dashboard</strong>: Zero-dependency dark management interface at <code>/web</code> with IP whitelist cloaking (returns <code>404 Not Found</code> to unauthorized external scanners).</li>
+</ul>
+<hr />
+<h2>🛡️ Supported Versions &amp; Security</h2>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>Version 1.3.x is the latest and officially supported release stream.</strong><br />
+We strongly recommend all teams run <strong>v1.3.x</strong>. Legacy releases (&lt; 1.3.0, including the old Python prototype) are <strong>deprecated, incompatible, inefficient, and can be unsafe</strong>. See <a href="#doc-security_policy" onclick="showPage('security_policy'); return false;">SECURITY.md</a> for full details.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Version</th>
+<th style="text-align: center;">Status</th>
+<th style="text-align: center;">Memory (RAM)</th>
+<th style="text-align: center;">TLS 1.3</th>
+<th style="text-align: left;">Engine</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>v1.3.x</code></strong> (Latest)</td>
+<td style="text-align: center;">🟢 <strong>Active / Recommended</strong></td>
+<td style="text-align: center;"><strong>~1.35 MiB</strong></td>
+<td style="text-align: center;">Native Direct Port</td>
+<td style="text-align: left;">Pure Rust (Axum 0.8 + Tokio)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>v1.2.x</code></td>
+<td style="text-align: center;">🔴 <strong>End-of-Life / Incompatible</strong></td>
+<td style="text-align: center;">~150 MiB</td>
+<td style="text-align: center;">Reverse Proxy Required</td>
+<td style="text-align: left;">Python (FastAPI + Uvicorn)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>&lt; v1.2.0</code></td>
+<td style="text-align: center;">🔴 <strong>End-of-Life</strong></td>
+<td style="text-align: center;">Legacy</td>
+<td style="text-align: center;">None</td>
+<td style="text-align: left;">Prototype</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>🚀 Quick Start</h2>
+<h3>Option A: Pull Multi-Arch Image from GHCR (Recommended)</h3>
+<p>Run the pre-built multi-architecture container (<code>amd64</code> and <code>arm64</code> supported automatically):</p>
+<pre><code class="language-bash">docker run -d \
+  --name league-voice-recorder-backend \
+  -p 8443:8443 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/certs:/app/certs \
+  -e ADMIN_KEY=&quot;your-super-secret-admin-key&quot; \
+  -e UPLOAD_KEY=&quot;your-upload-api-key&quot; \
+  -e PULL_KEY=&quot;your-pull-api-key&quot; \
+  --restart unless-stopped \
+  ghcr.io/betterix/league-voice-recorder-backend:latest
+</code></pre>
+<h3>Option B: Deploy with Docker Compose</h3>
+<ol>
+<li>
+<p><strong>Clone the repository:</strong>
+   <code>bash
+   git clone https://github.com/betterix/league-voice-recorder-backend.git
+   cd league-voice-recorder-backend</code></p>
+</li>
+<li>
+<p><strong>Configure your environment:</strong>
+   <code>bash
+   cp .env.example .env
+   # Edit .env with your strong API keys and credentials</code></p>
+</li>
+<li>
+<p><strong>Start the service:</strong>
+   <code>bash
+   docker compose up -d</code></p>
+</li>
+<li>
+<p><strong>Verify health:</strong>
+   <code>bash
+   curl -k -H "X-API-Key: YOUR_PULL_KEY" https://localhost:8443/api/v1/health</code></p>
+</li>
+</ol>
+<hr />
+<h2>📊 Real-Time Access Logging</h2>
+<p>The service outputs clean, structured real-time access logs for active API queries, uploads, and administrative actions:</p>
+<pre><code class="language-text">2026-11-17T12:00:01Z  INFO [HTTP] 198.51.100.12 POST /api/v1/recordings/8018190134 -&gt; 200 OK (142ms)
+2026-11-17T12:00:05Z  INFO [HTTP] 198.51.100.45 GET /api/v1/recordings/8018190134/download -&gt; 206 Partial Content (8ms)
+2026-11-17T12:00:15Z  WARN [HTTP] 203.0.113.88 GET /api/v1/recordings -&gt; 401 Unauthorized (120µs)
+</code></pre>
+<h3>Intelligent Healthcheck Noise Suppression</h3>
+<p>Docker and Kubernetes monitoring agents query <code>/api/v1/health</code> every 15–30 seconds. To prevent spamming your logs, <strong>successful healthchecks (<code>200 OK</code>) are automatically suppressed</strong> from the console output. If a health probe ever encounters an error or authentication failure, it is instantly logged at warning/error level.</p>
+<hr />
+<h2>🔑 API Endpoints</h2>
+<p>All endpoints require the <code>X-API-Key</code> header with appropriate tier permissions:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Endpoint</th>
+<th style="text-align: center;">Method</th>
+<th style="text-align: center;"><code>PULL_KEY</code></th>
+<th style="text-align: center;"><code>UPLOAD_KEY</code></th>
+<th style="text-align: center;"><code>ADMIN_KEY</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Health &amp; Telemetry</strong></td>
+<td><code>/api/v1/health</code></td>
+<td style="text-align: center;"><code>GET</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>List Recordings</strong></td>
+<td><code>/api/v1/recordings</code></td>
+<td style="text-align: center;"><code>GET</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>Get Metadata</strong></td>
+<td><code>/api/v1/recordings/{game_id}</code></td>
+<td style="text-align: center;"><code>GET</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>Download Recording</strong></td>
+<td><code>/api/v1/recordings/{game_id}/download</code></td>
+<td style="text-align: center;"><code>GET</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>Upload Recording</strong></td>
+<td><code>/api/v1/recordings/{game_id}</code></td>
+<td style="text-align: center;"><code>POST</code></td>
+<td style="text-align: center;">❌ <em>(403)</em></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><strong>Delete Recording</strong></td>
+<td><code>/api/v1/recordings/{game_id}</code></td>
+<td style="text-align: center;"><code>DELETE</code></td>
+<td style="text-align: center;">❌ <em>(403)</em></td>
+<td style="text-align: center;">❌ <em>(403)</em></td>
+<td style="text-align: center;">✅</td>
+</tr>
+</tbody>
+</table>
+<p>For complete schemas, request headers, query filters, and error representations, consult the <a href="#doc-api_reference" onclick="showPage('api_reference'); return false;">REST API Reference</a>.</p>
+<hr />
+<h2>🧭 Documentation</h2>
+<p>Modular documentation is available in the <a href="docs/"><code>docs/</code></a> directory:</p>
+<ul>
+<li>🏗️ <strong><a href="#doc-architecture" onclick="showPage('architecture'); return false;">System Architecture</a></strong> — Axum concurrency, thread safety, state management, and memory benchmarks.</li>
+<li>🛡️ <strong><a href="#doc-security_shield" onclick="showPage('security_shield'); return false;">Security &amp; Bot Shield</a></strong> — Constant-time auth, IP brute-force lockouts, scanner honeypots, and cloud crawler filtering.</li>
+<li>🎵 <strong><a href="#doc-audio_pipeline" onclick="showPage('audio_pipeline'); return false;">Audio Pipeline</a></strong> — Bounded chunked streaming, pure-Rust MPEG frame parsing, and HTTP Range downloads.</li>
+<li>📡 <strong><a href="#doc-api_reference" onclick="showPage('api_reference'); return false;">REST API Reference</a></strong> — Complete OpenAPI/REST specification and query parameters.</li>
+<li>🖥️ <strong><a href="#doc-web_dashboard" onclick="showPage('web_dashboard'); return false;">Web Dashboard</a></strong> — Cloaked administrative web UI, threat audit log, and in-browser playback.</li>
+<li>🚢 <strong><a href="#doc-deployment" onclick="showPage('deployment'); return false;">Deployment &amp; Operations</a></strong> — Production TLS certificates, multi-arch Docker deployment, and troubleshooting.</li>
+</ul>
+<hr />
+<h2>🛠️ Development &amp; Quality Assurance</h2>
+<pre><code class="language-bash"># Check formatting
+cargo fmt --check
+
+# Run strict linter (zero warnings policy)
+cargo clippy -- -D warnings
+
+# Run entire integration test suite
+cargo test
+
+# Build optimized release binary
+cargo build --release
+</code></pre>
+<hr />
+<h2>🤝 Contributing &amp; Community</h2>
+<p>Contributions are welcome! Please read our community guidelines before opening a pull request:
+- 📜 <strong><a href="CODE_OF_CONDUCT.md">Code of Conduct</a></strong>: Contributor Covenant v2.1 standards.
+- 🛠️ <strong><a href="#doc-contributing" onclick="showPage('contributing'); return false;">Contributing Guide</a></strong>: Development guidelines, memory constraints, and PR workflows.
+- 🔒 <strong><a href="#doc-security_policy" onclick="showPage('security_policy'); return false;">Security Policy</a></strong>: Supported versions and responsible disclosure procedures.
+- 🐛 <strong><a href=".github/ISSUE_TEMPLATE/">Issue Templates</a></strong>: Templates for bug reports and feature requests.</p>
+<hr />
+<h2>📄 License</h2>
+<p>This project is open-source software licensed under the <strong><a href="#doc-readme" onclick="showPage('readme'); return false;">GNU Affero General Public License v3.0 (AGPL-3.0)</a></strong>.</p>
+<p>Copyright (c) 2026 <strong><a href="https://github.com/betterix">Betterix</a></strong>.</p>
+        </div>
+      </section>
+    
+      <section id="doc-architecture" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Core Architecture</span>
+          <span class="file-path">ARCHITECTURE.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>System Architecture</h1>
+<p>The <strong>League Voice Recorder Backend</strong> is a high-performance, asynchronous audio storage and sync service written in <strong>Rust</strong> using the <a href="https://github.com/tokio-rs/axum">Axum</a> web framework and the <a href="https://tokio.rs/">Tokio</a> asynchronous runtime.</p>
+<hr />
+<h2>1. High-Level Design Principles</h2>
+<div class="mermaid-container"><div class="mermaid">flowchart TD
+    Ingress[&quot;🌐 Direct Port Ingress (Port 8443 HTTPS)&lt;br/&gt;• Native TLS 1.3 direct termination via axum-server and rustls&lt;br/&gt;• OpenSSL AEAD Ciphers: TLS_AES_256_GCM_SHA384 and CHACHA20_POLY1305&lt;br/&gt;• Zero reverse-proxy buffering or intermediate timeout bottlenecks&quot;]
+
+    Security[&quot;🛡️ Security and Multi-Tier Bot Shield Middleware&lt;br/&gt;• Persistent Database and In-Memory IP Blacklist Verification&lt;br/&gt;• Zero-Tolerance Scanner Probe Detection (Instant Permanent IP Ban)&lt;br/&gt;• Hybrid Datacenter and Cloud VPS Bot Shield (Offline Keywords + ip-api.com)&lt;br/&gt;• Lock-Free Sliding-Window Rate Limiter (DashMap Concurrent Tracker)&quot;]
+
+    API[&quot;📡 Core Headless REST API (/api/v1)&lt;br/&gt;• Strict 3-Key Constant-Time Header Authentication (X-API-Key)&lt;br/&gt;• Strongly Typed Serde JSON REST Schemas&lt;br/&gt;• 64 KB Bounded Streaming Audio Upload and Range Download Engine&quot;]
+
+    Web[&quot;🖥️ Cloaked Web Dashboard (/web)&lt;br/&gt;• Network Scanner Cloaking: Unwhitelisted IPs receive 404 Not Found&lt;br/&gt;• HTTP Basic Authentication with Constant-Time Password Verification&lt;br/&gt;• Zero-CDN Self-Contained Dark Esports UI for Scrim Audio Review&quot;]
+
+    Storage[&quot;💾 Storage, Database, and Persistence Engine&lt;br/&gt;• Audio Storage: atomic temporary stage commit to &amp;lt;GAME_ID&amp;gt;.mp3&lt;br/&gt;• Hardened SQLite with WAL Mode, normal sync, and 30s busy timeout&lt;br/&gt;• Tables: recordings, banned_ips, ip_activity, ip_intel&quot;]
+
+    Ingress --&gt; Security
+    Security --&gt;|Authorized API Traffic| API
+    Security --&gt;|Whitelisted Admin Traffic| Web
+    API --&gt; Storage
+    Web --&gt; Storage
+</div></div>
+<h3>1.1 Direct Internet Exposure (Native TLS 1.3)</h3>
+<p>Unlike legacy architectures that mandate an external Nginx, Apache, or Caddy reverse proxy, the service terminates TLS 1.3 directly on port <code>8443</code> using OpenSSL AEAD cipher suites (<code>TLS_AES_256_GCM_SHA384</code> and <code>TLS_CHACHA20_POLY1305_SHA256</code>). </p>
+<p>Direct-port ingress provides significant operational advantages:
+- <strong>Zero Proxy Buffering</strong>: Standard reverse proxies buffer incoming requests into temporary disk files before forwarding to backend apps. This causes fatal upload dropouts and 504 Gateway Timeouts for large audio transfers (up to 250 MB).
+- <strong>Sub-Millisecond Handshakes</strong>: Axum-server negotiates TLS handshakes natively with zero proxy hops, delivering sub-millisecond response latencies.
+- <strong>Simplified Operations</strong>: Eliminates separate web server configuration files, proxy header passing bugs, and multi-container ingress orchestration.</p>
+<h3>1.2 Thread-Safe Lock-Free Concurrency</h3>
+<p>Rate limiting, connection tracking, active ban state, and IP intelligence caches are maintained in memory via lock-free concurrent hash tables (<code>DashMap</code>). Mutex contention is completely avoided across Tokio worker threads:
+- <strong>DashMap Sharded Locking</strong>: Read operations execute concurrently without blocking other reader or writer threads.
+- <strong>Sliding-Window Token Buckets</strong>: Failed authentication attempts and rate-limit windows are tracked in microsecond timestamps.
+- <strong>Zero Memory Allocation Overhead</strong>: State objects are allocated once at server startup and shared across all request handlers via <code>Arc&lt;AppState&gt;</code>.</p>
+<h3>1.3 Hardened SQLite WAL Storage</h3>
+<p>The database engine runs SQLite via <code>sqlx::SqlitePool</code> with optimized concurrency pragmas:
+- <code>PRAGMA journal_mode = WAL;</code>: Write-Ahead Logging allows concurrent readers to query the database while a writer is appending new recording metadata.
+- <code>PRAGMA synchronous = NORMAL;</code>: Reduces disk sync operations without sacrificing database integrity in WAL mode.
+- <code>PRAGMA busy_timeout = 30000;</code>: 30-second busy timeout eliminates "database is locked" errors under heavy concurrent scrimmage uploads.
+- <code>PRAGMA foreign_keys = ON;</code>: Enforces relational integrity across tables.</p>
+<h3>1.4 Real-Time Structured Access Logging &amp; Noise Suppression</h3>
+<p>Every incoming request is processed by a custom Tokio middleware layer in <code>src/lib.rs</code>:
+- <strong>Real-Time Request Telemetry</strong>: Logs client IP, HTTP method, path, HTTP response status code, and latency in microseconds (<code>µs</code>) or milliseconds (<code>ms</code>).
+- <strong>Healthcheck Noise Suppression</strong>: Container monitoring agents probe <code>/api/v1/health</code> every 15–30 seconds. To prevent Docker logs from being spammed with thousands of redundant lines, successful health checks (<code>200 OK</code>) are automatically filtered out from console logs. If a health probe ever returns an error, it is instantly logged at warning/error level.</p>
+<h3>1.5 Bounded Memory Footprint (1.35 MiB Resident RAM)</h3>
+<p>By avoiding garbage-collected runtimes and using zero-copy byte streaming, the entire application consumes <strong>under 1.35 MiB of resident RAM</strong> in production. Memory usage remains completely flat regardless of whether the server is idling or streaming multiple concurrent 100 MB recordings.</p>
+<hr />
+<h2>2. Directory Hierarchy</h2>
+<pre><code class="language-text">league-voice-recorder-backend/
+├── Cargo.toml                # Rust project manifest and crate dependencies
+├── Cargo.lock                # Deterministic dependency lockfile
+├── Dockerfile                # Hardened multi-stage Alpine build
+├── docker-compose.yml        # Docker compose configuration
+├── .env.example              # Configuration environment template
+├── README.md                 # Concise project overview
+├── AGENTS.md                 # AI agent and developer instruction manual
+├── docs/                     # Modular documentation chapters
+│   ├── ARCHITECTURE.md       # High-level architecture (this file)
+│   ├── SECURITY_AND_BOT_SHIELD.md # Three-key auth, scanner/probe detection, hybrid VPS shield
+│   ├── AUDIO_PIPELINE.md     # MP3 chunked upload, validation, SHA-256, Range streaming
+│   ├── API_REFERENCE.md      # OpenAPI/REST endpoints reference
+│   ├── WEB_DASHBOARD.md      # Embedded cloaked UI and security operations
+│   └── DEPLOYMENT.md         # TLS setup, Docker, and production operations
+├── src/
+│   ├── main.rs               # Server startup, TLS listener, lifecycle hooks
+│   ├── lib.rs                # Core library definition and global middleware stack
+│   ├── config.rs             # Configuration validation and environment loader
+│   ├── db/
+│   │   ├── mod.rs            # Database connection pool (SqlitePool) &amp; pragmas
+│   │   └── models.rs         # Database schema structs (Recording, BannedIP, etc.)
+│   ├── security/
+│   │   ├── mod.rs            # Security module root
+│   │   ├── auth.rs           # 3-key authentication &amp; constant-time validation
+│   │   ├── rate_limiter.rs   # Sliding window rate limiter &amp; brute force protection
+│   │   ├── scanner.rs        # Scanner probe signature detection &amp; heuristic bans
+│   │   └── cert.rs           # TLS cert validation and dev ECDSA self-signed generation
+│   ├── bot_shield/
+│   │   ├── mod.rs            # Bot shield module root
+│   │   └── ip_intel.rs       # Hybrid Datacenter/VPS bot detection (offline + ip-api.com)
+│   ├── audio/
+│   │   ├── mod.rs            # Audio module root
+│   │   ├── mp3.rs            # Pure Rust MP3 frame parser, duration, bitrate, sample rate
+│   │   └── storage.rs        # Chunked streaming upload, hash computation, range streaming
+│   ├── api/
+│   │   ├── mod.rs            # API router (/api/v1)
+│   │   ├── health.rs         # GET /api/v1/health
+│   │   └── recordings.rs     # Upload, list, metadata, download, delete endpoints
+│   └── web/
+│       ├── mod.rs            # Web module router (/web)
+│       ├── auth.rs           # IP whitelist &amp; HTTP Basic Auth
+│       ├── router.rs         # Dashboard endpoints, streaming, download, upload, security
+│       └── dashboard.html    # Zero-dependency modern dark dashboard template
+└── tests/
+    ├── common/mod.rs         # Test fixtures, mock MP3 generator, test app builder
+    ├── test_api.rs           # Health, query, pagination, delete tests
+    ├── test_upload.rs        # Streaming upload, sha256 validation, duplicate check
+    ├── test_download.rs      # Resumable range requests (206 Partial Content)
+    ├── test_security.rs      # 3-key auth, brute-force IP blocking, scanner probe detection
+    └── test_web.rs           # Web dashboard, basic auth, IP whitelisting
+</code></pre>
+        </div>
+      </section>
+    
+      <section id="doc-security_shield" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Security & Protection</span>
+          <span class="file-path">SECURITY_AND_BOT_SHIELD.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>Security Model &amp; Bot Shield</h1>
+<p>The backend implements a multi-layered defense architecture specifically designed for services directly exposed to the public internet.</p>
+<hr />
+<h2>1. Strict Three-Key Authentication</h2>
+<p>All API operations under <code>/api/v1</code> require the <code>X-API-Key</code> HTTP header:</p>
+<table>
+<thead>
+<tr>
+<th>Key Role</th>
+<th>Target Audience</th>
+<th>Permissions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UPLOAD_KEY</code></td>
+<td>Scrim recording clients / players</td>
+<td>Upload scrimmage audio (<code>POST</code>), query recordings (<code>GET</code>), stream/download audio (<code>GET</code>), health check (<code>GET</code>). Destructive deletion attempts return <code>403 Forbidden</code>.</td>
+</tr>
+<tr>
+<td><code>PULL_KEY</code></td>
+<td>Coaches, analysts, synchronizers</td>
+<td>Query recordings (<code>GET</code>), stream/download audio (<code>GET</code>), health check (<code>GET</code>). Write and delete attempts return <code>403 Forbidden</code>.</td>
+</tr>
+<tr>
+<td><code>ADMIN_KEY</code></td>
+<td>Master administrative operator</td>
+<td>Unrestricted read, write, upload, delete (<code>DELETE</code>), and diagnostic access.</td>
+</tr>
+</tbody>
+</table>
+<h3>Constant-Time Verification</h3>
+<p>All key and credential evaluations use constant-time byte comparisons (<code>subtle::ConstantTimeEq</code>) to eliminate side-channel timing attacks.</p>
+<hr />
+<h2>2. Sliding-Window Rate Limiting</h2>
+<p>The in-memory rate limiter tracks requests per IP using sliding-window timestamps stored in thread-safe concurrent maps:</p>
+<ul>
+<li><strong>General API Limit</strong>: 120 requests per IP per minute (configurable via <code>RATE_LIMIT_PER_MINUTE</code>).</li>
+<li><strong>Upload Endpoint Limit</strong>: 10 uploads per IP per minute (configurable via <code>UPLOAD_RATE_LIMIT_PER_MINUTE</code>).</li>
+<li>When a limit is reached, the server responds with <code>429 Too Many Requests</code> along with a <code>Retry-After: &lt;seconds&gt;</code> HTTP header.</li>
+</ul>
+<hr />
+<h2>3. Brute-Force Authentication Defense</h2>
+<ul>
+<li>Failed authentication attempts (invalid or missing <code>X-API-Key</code>, or invalid web dashboard credentials) are tracked per client IP.</li>
+<li>Upon reaching 5 failed attempts within 60 seconds (configurable via <code>AUTH_FAILURE_LIMIT_PER_MINUTE</code>), the IP is temporarily blocked across all endpoints for 10 minutes (<code>429 Too Many Requests</code>).</li>
+</ul>
+<hr />
+<h2>4. Zero-Tolerance Scanner &amp; Exploit Probe Detection</h2>
+<p>Automated vulnerability scanners (e.g., Nikto, Censys, Shodan, automated WebDAV/PHP bots) are blocked before reaching application logic:</p>
+<ol>
+<li><strong>Signature Detection</strong>:</li>
+<li>Sensitive dot files (<code>.env</code>, <code>.git</code>, <code>.aws</code>, <code>.ssh</code>, <code>.vscode</code>)</li>
+<li>Directory traversal sequences (<code>../</code>, <code>..\</code>, <code>%2e%2e%2f</code>)</li>
+<li>CMS reconnaissance (<code>/wp-</code>, <code>/wordpress</code>, <code>xmlrpc.php</code>, <code>rest_route=</code>)</li>
+<li>Server-side script extensions (<code>.php</code>, <code>.asp</code>, <code>.aspx</code>, <code>.jsp</code>, <code>.cgi</code>)</li>
+<li>Admin panels (<code>/phpmyadmin</code>, <code>/pma</code>, <code>/adminer</code>, <code>/cpanel</code>)</li>
+<li>Spring Boot Actuators, consoles, metrics (<code>/actuator</code>, <code>/console</code>, <code>/metrics</code>, <code>/telescope</code>)</li>
+<li>GraphQL and MCP probe signatures (<code>/graphql</code>, <code>/mcp</code>, <code>/v1/models</code>, <code>/sse</code>)</li>
+<li>
+<p>Suspicious HTTP methods (<code>PROPFIND</code>, <code>SEARCH</code>, <code>MKCOL</code>, <code>CONNECT</code>, etc.)</p>
+</li>
+<li>
+<p><strong>Instant Permanent Ban</strong>:</p>
+</li>
+<li>Any client IP matching scanner signatures is immediately banned permanently in the SQLite <code>banned_ips</code> table and rejected with <code>403 Forbidden</code>.</li>
+<li>
+<p>The ban persists across server restarts.</p>
+</li>
+<li>
+<p><strong>Heuristic Client Error Tracker</strong>:</p>
+</li>
+<li>Unauthenticated requests generating client errors (<code>400 Bad Request</code>, <code>404 Not Found</code>, or <code>405 Method Not Allowed</code>) are tracked.</li>
+<li>If an IP accumulates 5 client errors within 60 seconds, it is automatically banned for 60 minutes.</li>
+</ol>
+<hr />
+<h2>5. Hybrid Datacenter / VPS Bot Shield</h2>
+<p>Most malicious scanning originates from cloud hosting providers, virtual private servers (VPS), and automated crawler networks rather than residential player connections.</p>
+<p>The backend employs a two-tier hybrid classifier:</p>
+<ol>
+<li>
+<p><strong>Fast Offline Keyword Filter</strong>:
+   Evaluates Autonomous System (AS), Organization, and ISP strings against known cloud and hosting providers (<code>digitalocean</code>, <code>amazon</code>, <code>hetzner</code>, <code>ovh</code>, <code>linode</code>, <code>vultr</code>, <code>choopa</code>, <code>datacamp</code>, <code>censys</code>, <code>shodan</code>, <code>leaseweb</code>, <code>scaleway</code>, <code>alibaba</code>, <code>tencent</code>, <code>oracle</code>, etc.).</p>
+</li>
+<li>
+<p><strong>Asynchronous External Intelligence</strong>:
+   For uncached public IPs, queries <code>ip-api.com</code> asynchronously (1.8-second timeout). If the <code>hosting</code> or <code>proxy</code> flag is true, or known provider keywords match, the IP is classified as <code>Datacenter/VPS</code>.</p>
+</li>
+<li>
+<p><strong>Persistent Classification Cache</strong>:
+   Classifications are stored in memory (<code>DashMap</code>) and persisted to the SQLite <code>ip_intel</code> table.</p>
+</li>
+<li>
+<p><strong>Bypass Policy</strong>:
+   Requests carrying a valid <code>X-API-Key</code> or originating from configured <code>WEB_ALLOWED_IPS</code> management hosts or local/private networks (<code>127.0.0.1</code>, RFC1918) are completely exempt from datacenter blocking.</p>
+</li>
+</ol>
+        </div>
+      </section>
+    
+      <section id="doc-audio_pipeline" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Audio Engine</span>
+          <span class="file-path">AUDIO_PIPELINE.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>Audio Pipeline &amp; Storage Mechanics</h1>
+<p>The audio subsystem is built for streaming high-capacity audio uploads and resumable partial downloads while maintaining bounded memory consumption.</p>
+<hr />
+<h2>1. Upload Processing Pipeline</h2>
+<div class="mermaid-container"><div class="mermaid">flowchart TD
+    Client[&quot;Client: POST /api/v1/recordings/game_id&quot;]
+
+    Step1[&quot;1. Game ID Validation&lt;br/&gt;Regex: ^[a-zA-Z0-9_-]{1,64}$&quot;]
+    Err1[&quot;Reject Traversal Characters&lt;br/&gt;HTTP 400 Bad Request&quot;]
+
+    Step2[&quot;2. Duplicate Check in DB&lt;br/&gt;Query SQLite recordings table&quot;]
+    Err2[&quot;Abort Duplicate Game ID&lt;br/&gt;HTTP 409 Conflict&quot;]
+
+    Step3[&quot;3. Chunked Streaming Write&lt;br/&gt;• Stream 64 KB chunks to .tmp_game_id_uuid.mp3&lt;br/&gt;• Compute incremental SHA-256 hash&lt;br/&gt;• Enforce MAX_UPLOAD_MB limit&quot;]
+    Err3[&quot;Payload Too Large&lt;br/&gt;HTTP 413 Payload Too Large&quot;]
+
+    Step4[&quot;4. Checksum Verification&lt;br/&gt;Constant-time subtle::ConstantTimeEq&quot;]
+    Err4[&quot;Checksum Mismatch&lt;br/&gt;HTTP 400 Bad Request&quot;]
+
+    Step5[&quot;5. MPEG Audio Validation&lt;br/&gt;Pure Rust MPEG-1 Layer 3 frame parser&lt;br/&gt;• Extract duration, bitrate, sample rate&quot;]
+    Err5[&quot;Corrupt or Invalid MP3&lt;br/&gt;HTTP 400 Bad Request&quot;]
+
+    Step6[&quot;6. Atomic File Rename&lt;br/&gt;Atomically rename .tmp file to game_id.mp3&quot;]
+
+    Step7[&quot;7. SQLite DB Commit&lt;br/&gt;Insert match metadata into recordings&lt;br/&gt;Rollback and unlink file on error&quot;]
+
+    Client --&gt; Step1
+    Step1 --&gt;|Invalid Path| Err1
+    Step1 --&gt;|Valid ID| Step2
+    Step2 --&gt;|Already Exists| Err2
+    Step2 --&gt;|New Game ID| Step3
+    Step3 --&gt;|Exceeds Limit| Err3
+    Step3 --&gt;|Write Complete| Step4
+    Step4 --&gt;|Hash Mismatch| Err4
+    Step4 --&gt;|Hash Verified| Step5
+    Step5 --&gt;|Invalid Frame Header| Err5
+    Step5 --&gt;|Valid MPEG-1 Layer 3| Step6
+    Step6 --&gt; Step7
+</div></div>
+<h3>1.1 Game ID Sanitization &amp; Path Traversal Defense</h3>
+<ul>
+<li><strong>Regex Boundary</strong>: Every game ID parameter is validated strictly against <code>^[a-zA-Z0-9_-]{1,64}$</code>.</li>
+<li><strong>Injection Prevention</strong>: Any input containing path traversal sequences (<code>../</code>, <code>..\</code>), directory separators (<code>/</code>, <code>\</code>), or null bytes (<code>\0</code>) is immediately rejected with <code>400 Bad Request</code>.</li>
+<li><strong>Reserved Names</strong>: Protects against OS-reserved filenames (such as <code>CON</code>, <code>PRN</code>, <code>AUX</code>, <code>NUL</code> on Windows clients).</li>
+</ul>
+<h3>1.2 Bounded Memory Streaming (64 KB Chunks)</h3>
+<ul>
+<li><strong>Zero Full-File Buffering</strong>: The server never buffers complete audio recordings in memory (<code>tokio::fs::read</code> is strictly prohibited).</li>
+<li><strong>Stream Flow</strong>: Uploads stream chunk-by-chunk using a fixed 64 KB buffer (<code>CHUNK_SIZE = 64 * 1024</code>) directly from the incoming HTTP multipart/binary stream to an isolated temporary file on disk (<code>.tmp_&lt;game_id&gt;_&lt;uuid&gt;.mp3</code>).</li>
+<li><strong>Real-Time Cryptographic Hashing</strong>: An incremental SHA-256 digest (<code>ring::digest::Context</code>) processes each 64 KB chunk in-flight as it passes through memory, computing the exact checksum with zero secondary disk reads.</li>
+<li><strong>Upload Size Guard</strong>: If the incoming byte stream exceeds <code>MAX_UPLOAD_MB</code> (default 250 MB), the upload is terminated immediately and returns <code>413 Payload Too Large</code>, unlinking the partial temporary file.</li>
+</ul>
+<h3>1.3 Checksum Verification &amp; Timing-Attack Prevention</h3>
+<ul>
+<li>Clients may supply an expected SHA-256 hash via the <code>X-Checksum-SHA256</code> HTTP header.</li>
+<li>The computed in-flight hash is compared against the client's provided checksum using <strong>constant-time equality</strong> (<code>subtle::ConstantTimeEq</code>).</li>
+<li>If a hash mismatch occurs (e.g. corrupted network transfer), the temporary file is unlinked and the request returns <code>400 Bad Request</code>.</li>
+</ul>
+<h3>1.4 Pure Rust MPEG-1 Layer 3 Frame Parsing</h3>
+<p>The audio engine validates audio stream validity using a pure-Rust MPEG frame parser without invoking external C libraries (such as FFmpeg, libmp3lame, or SoX):
+- <strong>ID3v2 Header Bypass</strong>: Automatically detects and safely skips ID3v2 metadata tags by decoding the 4-byte sync-safe integer length.
+- <strong>Frame Sync Word</strong>: Scans for the MPEG-1 Layer III 11-bit sync word (<code>0x7FF</code> / <code>0xFFE0</code>).
+- <strong>Header Bitfields</strong>: Extracts MPEG audio version, layer index, bitrate index, sampling frequency, and padding bit.
+- <strong>Frame Length Calculation</strong>:
+  <code>text
+  FrameSize = ((144 * Bitrate_bps) / SampleRate_Hz) + Padding</code>
+- <strong>Playback Duration Calculation</strong>:
+  <code>text
+  Duration_Seconds = (Total_Valid_Frames * 1152) / SampleRate_Hz</code>
+- <strong>Integrity Validation</strong>: Rejects non-audio payloads, corrupted streams, or disguised executables with <code>400 Bad Request</code>.</p>
+<h3>1.5 Atomic Two-Phase Commit &amp; Rollback</h3>
+<ul>
+<li>Audio files are initially staged with unique temporary filenames (<code>.tmp_&lt;game_id&gt;_&lt;uuid&gt;.mp3</code>).</li>
+<li>Once validation succeeds, the file is atomically renamed to <code>&lt;game_id&gt;.mp3</code> using filesystem-level atomic rename (POSIX <code>rename()</code>).</li>
+<li>If SQLite metadata insertion fails, a database rollback is executed and the audio file is cleanly deleted from disk.</li>
+</ul>
+<hr />
+<h2>2. Resumable Downloads &amp; HTTP Range Requests</h2>
+<p>Clients, VLC players, desktop synchronizers, and browsers query:
+<code>GET /api/v1/recordings/{game_id}/download</code></p>
+<h3>2.1 RFC 7233 Range Header Specifications</h3>
+<p>The storage layer parses HTTP Range headers for seamless audio scrubbing and resumed downloads:
+- <strong>Explicit Range</strong>: <code>Range: bytes=0-1048575</code> (requests the first 1 MB chunk).
+- <strong>Open-Ended Range</strong>: <code>Range: bytes=1048576-</code> (requests from 1 MB through EOF).
+- <strong>Suffix Range</strong>: <code>Range: bytes=-524288</code> (requests the final 512 KB of the file).</p>
+<h3>2.2 Response Specifications</h3>
+<ul>
+<li><strong>Valid Range</strong>: Returns <code>206 Partial Content</code> with <code>Content-Range: bytes &lt;start&gt;-&lt;end&gt;/&lt;total&gt;</code> and <code>Content-Length</code>.</li>
+<li><strong>Invalid / Out-of-bounds Range</strong>: Returns <code>416 Range Not Satisfiable</code> with <code>Content-Range: bytes */&lt;total&gt;</code>.</li>
+<li><strong>Standard Request (No Range)</strong>: Returns <code>200 OK</code> with <code>Accept-Ranges: bytes</code> and <code>Content-Disposition: attachment; filename="&lt;game_id&gt;.mp3"</code>.</li>
+</ul>
+<hr />
+<h2>3. Storage Directory Hierarchy</h2>
+<p>Audio files and SQLite WAL databases are organized cleanly in persistent storage:</p>
+<pre><code class="language-text">data/
+├── recordings/
+│   ├── 8018190134.mp3       # Complete verified scrimmage recording
+│   ├── 8018190135.mp3       # Complete verified scrimmage recording
+│   └── .tmp_8018190136_*.mp3# In-flight chunked streaming staging file
+└── db.sqlite                # Hardened SQLite database with WAL and busy timeout
+</code></pre>
+        </div>
+      </section>
+    
+      <section id="doc-api_reference" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">API Reference</span>
+          <span class="file-path">API_REFERENCE.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>REST API Reference (<code>/api/v1</code>)</h1>
+<p>All endpoints under <code>/api/v1</code> require authentication via the <code>X-API-Key</code> HTTP header.</p>
+<hr />
+<h2>1. Health &amp; Diagnostics</h2>
+<h3><code>GET /api/v1/health</code></h3>
+<p>Returns runtime health status, version, storage capacity, and total recording count.</p>
+<ul>
+<li><strong>Required Roles</strong>: <code>PULL</code>, <code>UPLOAD</code>, or <code>ADMIN</code>.</li>
+<li><strong>Response <code>200 OK</code></strong>:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;ok&quot;,
+  &quot;version&quot;: &quot;1.3.1&quot;,
+  &quot;authenticated_role&quot;: &quot;pull&quot;,
+  &quot;storage_total_bytes&quot;: 104857600000,
+  &quot;storage_used_bytes&quot;: 12582912000,
+  &quot;storage_free_bytes&quot;: 92274688000,
+  &quot;recording_count&quot;: 42
+}
+</code></pre>
+<hr />
+<h2>2. Recordings API</h2>
+<h3><code>POST /api/v1/recordings/{game_id}</code></h3>
+<p>Uploads and registers a scrimmage audio recording.</p>
+<ul>
+<li><strong>Required Roles</strong>: <code>UPLOAD</code> or <code>ADMIN</code>. (Callers with <code>PULL_KEY</code> receive <code>403 Forbidden</code>).</li>
+<li><strong>Headers</strong>:</li>
+<li><code>X-API-Key</code>: Required upload or admin key.</li>
+<li><code>X-Checksum-SHA256</code>: Optional client-calculated 64-character SHA-256 hex digest for integrity verification.</li>
+<li><strong>Multipart Form Fields</strong>:</li>
+<li><code>file</code>: Required MP3 binary file stream.</li>
+<li><code>team_tag</code>: Optional team identifier (e.g., <code>T1</code>, <code>G2</code>).</li>
+<li><code>notes</code>: Optional scrim notes or champion draft notes.</li>
+<li><code>match_date</code>: Optional ISO date string.</li>
+<li><strong>Response <code>201 Created</code></strong>:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;game_id&quot;: &quot;8018190134&quot;,
+  &quot;filename&quot;: &quot;8018190134.mp3&quot;,
+  &quot;file_size&quot;: 25165824,
+  &quot;duration&quot;: 1845.2,
+  &quot;bitrate&quot;: 128000,
+  &quot;sample_rate&quot;: 44100,
+  &quot;upload_timestamp&quot;: &quot;2026-11-17T10:00:00Z&quot;,
+  &quot;team_tag&quot;: &quot;T1&quot;,
+  &quot;notes&quot;: &quot;Game 1 vs GenG&quot;,
+  &quot;match_date&quot;: &quot;2026-11-17&quot;,
+  &quot;sha256&quot;: &quot;e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855&quot;
+}
+</code></pre>
+<hr />
+<h3><code>GET /api/v1/recordings</code></h3>
+<p>Lists recorded scrimmage audio files with pagination and search.</p>
+<ul>
+<li><strong>Required Roles</strong>: <code>PULL</code>, <code>UPLOAD</code>, or <code>ADMIN</code>.</li>
+<li><strong>Query Parameters</strong>:</li>
+<li><code>skip</code>: Records offset to skip (default: <code>0</code>).</li>
+<li><code>limit</code>: Maximum records to return (default: <code>50</code>, max: <code>100</code>).</li>
+<li><code>search</code>: Substring search matching <code>game_id</code> or <code>team_tag</code>.</li>
+<li><strong>Response <code>200 OK</code></strong>:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;items&quot;: [
+    {
+      &quot;game_id&quot;: &quot;8018190134&quot;,
+      &quot;filename&quot;: &quot;8018190134.mp3&quot;,
+      &quot;file_size&quot;: 25165824,
+      &quot;duration&quot;: 1845.2,
+      &quot;bitrate&quot;: 128000,
+      &quot;sample_rate&quot;: 44100,
+      &quot;upload_timestamp&quot;: &quot;2026-11-17T10:00:00Z&quot;,
+      &quot;team_tag&quot;: &quot;T1&quot;,
+      &quot;notes&quot;: &quot;Game 1 vs GenG&quot;,
+      &quot;match_date&quot;: &quot;2026-11-17&quot;,
+      &quot;sha256&quot;: &quot;e3b0c442...&quot;
+    }
+  ],
+  &quot;total&quot;: 1,
+  &quot;skip&quot;: 0,
+  &quot;limit&quot;: 50
+}
+</code></pre>
+<hr />
+<h3><code>GET /api/v1/recordings/{game_id}</code></h3>
+<p>Retrieves metadata for a specific game recording.</p>
+<ul>
+<li><strong>Required Roles</strong>: <code>PULL</code>, <code>UPLOAD</code>, or <code>ADMIN</code>.</li>
+<li><strong>Response <code>200 OK</code></strong>: Returns <code>RecordingMetadataResponse</code> object.</li>
+<li><strong>Error <code>404 Not Found</code></strong>: When game ID does not exist.</li>
+</ul>
+<hr />
+<h3><code>GET /api/v1/recordings/{game_id}/download</code></h3>
+<p>Streams the recording audio file with full HTTP Range request support.</p>
+<ul>
+<li><strong>Required Roles</strong>: <code>PULL</code>, <code>UPLOAD</code>, or <code>ADMIN</code>.</li>
+<li><strong>Headers</strong>:</li>
+<li><code>Range</code>: Optional byte range specification (<code>bytes=0-1048575</code>).</li>
+<li><strong>Response <code>200 OK</code></strong>: Full audio stream with <code>Content-Disposition: attachment</code>.</li>
+<li><strong>Response <code>206 Partial Content</code></strong>: Partial byte stream with <code>Content-Range: bytes start-end/total</code>.</li>
+<li><strong>Response <code>416 Range Not Satisfiable</code></strong>: If range is out of bounds.</li>
+</ul>
+<hr />
+<h3><code>DELETE /api/v1/recordings/{game_id}</code></h3>
+<p>Deletes recording audio from storage and purges metadata from the database.</p>
+<ul>
+<li><strong>Required Roles</strong>: <code>ADMIN</code> ONLY. (<code>UPLOAD</code> and <code>PULL</code> callers receive <code>403 Forbidden</code>).</li>
+<li><strong>Response <code>200 OK</code></strong>:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;message&quot;: &quot;Recording '8018190134' successfully deleted&quot;,
+  &quot;game_id&quot;: &quot;8018190134&quot;
+}
+</code></pre>
+        </div>
+      </section>
+    
+      <section id="doc-web_dashboard" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Management</span>
+          <span class="file-path">WEB_DASHBOARD.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>Embedded Web Dashboard (<code>/web</code>)</h1>
+<p>The backend includes a zero-dependency, self-contained administrative web interface embedded directly into the compiled binary.</p>
+<hr />
+<h2>1. Security &amp; IP Cloaking</h2>
+<p>Access to <code>/web</code> is protected by two layers:</p>
+<ol>
+<li><strong>IP Whitelist Enforcement</strong>:</li>
+<li>Only client IPs matching <code>WEB_ALLOWED_IPS</code> (comma-separated IP addresses or subnets) can access the interface.</li>
+<li>Unauthorized IPs receive <code>404 Not Found</code> (rather than <code>401</code> or <code>403</code>), completely cloaking the existence of the management dashboard from port scanners.</li>
+<li>
+<p>Localhost (<code>127.0.0.1</code>, <code>::1</code>) and local Docker bridge networks are permitted by default for local maintenance. Set <code>0.0.0.0</code> to permit access from any IP.</p>
+</li>
+<li>
+<p><strong>HTTP Basic Authentication</strong>:</p>
+</li>
+<li>Prompts for <code>WEB_USERNAME</code> and <code>WEB_PASSWORD</code> (configured in <code>.env</code>).</li>
+<li>Constant-time verification prevents brute-force timing attacks.</li>
+<li>5 failed attempts trigger a 10-minute ban on the client IP.</li>
+</ol>
+<hr />
+<h2>2. Dashboard Features</h2>
+<h3>2.1 Scrim Recordings View</h3>
+<ul>
+<li>Real-time disk storage capacity cards (Total, Used, Free).</li>
+<li>Interactive search filter matching Game IDs, team tags, or match dates.</li>
+<li>In-browser HTML5 audio player (<code>/web/stream/{game_id}</code>) for instant review.</li>
+<li>Direct MP3 download button (<code>/web/download/{game_id}</code>).</li>
+<li>Manual file upload form with progress indicator.</li>
+<li>Administrative delete button with confirmation dialog.</li>
+</ul>
+<h3>2.2 Security &amp; Threat Audit View</h3>
+<ul>
+<li>Live counter of actively blocked scanner IPs.</li>
+<li>Categorized IP traffic stream (<code>download</code>, <code>suspicious</code>, <code>blocked</code>, <code>api</code>).</li>
+<li><strong>Bot Shield Badges</strong>:</li>
+<li>🏠 <strong>Residential ISP</strong>: Normal human player connections.</li>
+<li>☁️ <strong>Datacenter / VPS</strong>: Automated scanners, AWS/DigitalOcean bots, and cloud crawlers.</li>
+<li>One-click IP unban and quota reset.</li>
+<li>Manual IP permanent ban form.</li>
+</ul>
+        </div>
+      </section>
+    
+      <section id="doc-deployment" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Operations</span>
+          <span class="file-path">DEPLOYMENT.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>Deployment &amp; Operations</h1>
+<p>This document covers deployment options for the Rust backend: Docker Compose, native binary execution, and TLS certificates.</p>
+<hr />
+<h2>1. Quickstart with Docker Compose</h2>
+<h3>Prerequisites</h3>
+<ul>
+<li>Docker Engine 24+ and Docker Compose v2.</li>
+</ul>
+<h3>Step-by-Step Setup</h3>
+<ol>
+<li>
+<p>Clone the repository and navigate to the directory:
+   <code>bash
+   git clone https://github.com/betterix/league-voice-recorder-backend.git
+   cd league-voice-recorder-backend</code></p>
+</li>
+<li>
+<p>Copy the environment template:
+   <code>bash
+   cp .env.example .env</code></p>
+</li>
+<li>
+<p>Configure your production credentials in <code>.env</code>:</p>
+</li>
+<li>Set strong random 32+ character secrets for <code>UPLOAD_KEY</code>, <code>PULL_KEY</code>, and <code>ADMIN_KEY</code>.</li>
+<li>Set <code>WEB_USERNAME</code> and a strong 16+ character <code>WEB_PASSWORD</code>.</li>
+<li>
+<p>Set <code>WEB_ALLOWED_IPS</code> to your management IP address (or <code>0.0.0.0</code> if your IP changes frequently).</p>
+</li>
+<li>
+<p>Build and start the container:
+   <code>bash
+   docker compose up -d --build</code></p>
+</li>
+<li>
+<p>Verify health:
+   <code>bash
+   docker compose ps
+   curl -k -H "X-API-Key: YOUR_UPLOAD_KEY" https://localhost:8443/api/v1/health</code></p>
+</li>
+</ol>
+<hr />
+<h2>2. TLS Certificate Management</h2>
+<p>The backend listens natively over TLS 1.3 on port <code>8443</code>.</p>
+<h3>2.1 Production: Let's Encrypt / CA Certificates</h3>
+<p>Place your certificate and private key in <code>./certs</code>:
+- <code>./certs/cert.pem</code>: Full certificate chain (PEM format).
+- <code>./certs/key.pem</code>: Private key (PEM format).</p>
+<p>Verify file permissions:</p>
+<pre><code class="language-bash">chmod 600 certs/key.pem
+chmod 644 certs/cert.pem
+</code></pre>
+<h3>2.2 Development: Automatic Self-Signed Certificates</h3>
+<p>When running with <code>ENVIRONMENT=development</code> or <code>DEV_SELF_SIGNED_CERT=true</code>, the backend automatically generates a self-signed ECDSA certificate with Subject Alternative Names (SANs) for <code>localhost</code>, <code>127.0.0.1</code>, and your configured <code>DOMAIN_NAME</code> if missing from <code>./certs</code>.</p>
+<hr />
+<h2>3. Native Compilation</h2>
+<p>To compile and run directly on a host:</p>
+<pre><code class="language-bash"># Build release binary
+cargo build --release
+
+# Run binary with your .env
+./target/release/league-voice-recorder-backend
+</code></pre>
+<p>Run tests:</p>
+<pre><code class="language-bash">cargo test
+</code></pre>
+        </div>
+      </section>
+    
+      <section id="doc-security_policy" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Governance</span>
+          <span class="file-path">SECURITY.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>Security Policy</h1>
+<p>The <strong>League Voice Recorder Backend</strong> team takes the security and integrity of scrimmage audio and remote team data seriously. This document outlines our supported versions, threat model guidelines, and responsible vulnerability disclosure process.</p>
+<hr />
+<h2>🛡️ Supported Versions</h2>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>Version 1.3.x is the latest and officially supported release stream.</strong>
+We strongly recommend all operators, teams, and developers run <strong>v1.3.x</strong>.</p>
+<p>All legacy versions (including the <strong>1.2.x</strong> Python implementation and earlier) are <strong>deprecated, incompatible, inefficient, and can be unsafe</strong>. Legacy versions will receive no further security patches, performance fixes, or maintenance.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Version Stream</th>
+<th style="text-align: left;">Release Architecture</th>
+<th style="text-align: center;">Supported</th>
+<th style="text-align: left;">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>1.3.x</code></strong></td>
+<td style="text-align: left;"><strong>Rust (Axum 0.8 + Tokio)</strong></td>
+<td style="text-align: center;">✅ <strong>Yes</strong></td>
+<td style="text-align: left;"><strong>Active &amp; Recommended</strong> (Hardened TLS 1.3, constant-time auth, bot shield)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>1.2.x</code></td>
+<td style="text-align: left;">Python (FastAPI / Uvicorn)</td>
+<td style="text-align: center;">❌ <strong>No</strong></td>
+<td style="text-align: left;"><strong>End-of-Life</strong> (Incompatible, inefficient, non-hardened)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>&lt; 1.2.0</code></td>
+<td style="text-align: left;">Legacy Scripts / Prototypes</td>
+<td style="text-align: center;">❌ <strong>No</strong></td>
+<td style="text-align: left;"><strong>End-of-Life</strong> (Unsupported)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>⚠️ Why 1.3.x is Required</h2>
+<p>The v1.3.x series represents a complete re-architecture from the ground up in memory-safe Rust:</p>
+<ol>
+<li><strong>Memory Safety &amp; Bounded Resource Consumption</strong>: Operates under <strong>1.35 MiB</strong> of RAM in production. Audio streaming is strictly bounded in 64 KB chunks, mitigating denial-of-service (DoS) via memory exhaustion.</li>
+<li><strong>Timing Attack Elimination</strong>: All API credentials (<code>UPLOAD_KEY</code>, <code>PULL_KEY</code>, <code>ADMIN_KEY</code>) and web dashboard passwords are authenticated using <code>subtle::ConstantTimeEq</code>.</li>
+<li><strong>Active Exploit &amp; Scanner Defense</strong>: Includes automated zero-tolerance bans for vulnerability scanner probes (<code>/.env</code>, <code>/.git</code>, <code>/actuator</code>, <code>PROPFIND</code>), sliding-window brute-force rate limiters, and hybrid datacenter/VPS bot filtering.</li>
+<li><strong>Direct-Port TLS 1.3</strong>: Direct native TLS termination eliminates the need for intermediate reverse proxy buffering, preventing truncation of large audio files.</li>
+<li><strong>Schema Compatibility</strong>: The database schema and audio integrity hashing in 1.3.x are not compatible with the outdated 1.2.x architecture.</li>
+</ol>
+<hr />
+<h2>🔒 Reporting a Vulnerability</h2>
+<p>If you discover a security vulnerability within the League Voice Recorder Backend, please follow responsible disclosure practices so we can address it before it is publicly revealed.</p>
+<h3>Reporting Channels</h3>
+<ul>
+<li><strong>GitHub Private Vulnerability Reporting</strong>: Submit an advisory directly via the <strong>Security</strong> tab of the GitHub repository:<br />
+<a href="https://github.com/betterix/league-voice-recorder-backend/security/advisories/new">https://github.com/betterix/league-voice-recorder-backend/security/advisories/new</a></li>
+<li><strong>Direct Email</strong>: You can also reach the project maintainer securely at:<br />
+<strong><code>szabozsolt430@gmail.com</code></strong></li>
+</ul>
+<h3>What to Include</h3>
+<p>To help us triage and resolve the issue quickly, please provide:
+- A clear description of the vulnerability and its potential impact.
+- Steps to reproduce, proof-of-concept (PoC) code, or HTTP request payloads (using RFC 5737 documentation IPs like <code>203.0.113.x</code>).
+- The specific version of <code>league-voice-recorder-backend</code> and environment details (e.g. Docker container, host architecture amd64 or arm64).</p>
+<h3>Response Timeline</h3>
+<ul>
+<li><strong>Initial Acknowledgment</strong>: Within <strong>48 hours</strong> of report receipt.</li>
+<li><strong>Triage &amp; Assessment</strong>: Within <strong>5 business days</strong>, detailing validation and expected remediation timeline.</li>
+<li><strong>Patch Release &amp; Advisory</strong>: Coordinated public disclosure once a patch is tested and released in a v1.3.x update.</li>
+</ul>
+<hr />
+<h2>🏅 Safe Harbor</h2>
+<p>We consider activities conducted in accordance with this policy to be authorized. We will not pursue legal action against researchers who:
+- Make a good-faith effort to avoid privacy violations, data destruction, and service degradation.
+- Give us reasonable time to remediate before disclosing vulnerability details publicly.
+- Do not exploit a security issue beyond the minimum necessary to demonstrate its presence.</p>
+        </div>
+      </section>
+    
+      <section id="doc-contributing" class="doc-page">
+        <div class="doc-header-pill">
+          <span class="category-tag">Governance</span>
+          <span class="file-path">CONTRIBUTING.md</span>
+        </div>
+        <div class="markdown-body">
+          <h1>Contributing to League Voice Recorder Backend</h1>
+<p>First off, thank you for considering contributing to the <strong>League Voice Recorder Backend</strong>! It's contributions like yours that make this service reliable, secure, and blazing fast for esports teams worldwide.</p>
+<hr />
+<h2>🧭 Code of Conduct</h2>
+<p>By participating in this project, you agree to abide by our <a href="CODE_OF_CONDUCT.md">Code of Conduct</a>. Please report any unacceptable behavior to <a href="mailto:szabozsolt430@gmail.com">szabozsolt430@gmail.com</a>.</p>
+<hr />
+<h2>🎯 Architecture &amp; Versioning Notice</h2>
+<p>Starting with version <strong>1.3.x</strong>, the backend has been completely redesigned and rewritten in <strong>pure Rust</strong> (Axum 0.8 &amp; Tokio):
+- <strong>Ultra-lean resource footprint</strong>: Operates under <strong>1.35 MiB</strong> of resident RAM in production.
+- <strong>Native Direct-Port TLS 1.3</strong>: Direct listener on port <code>8443</code> without requiring an external reverse proxy.
+- <strong>Strict Single-Branch Workflow</strong>: Development occurs exclusively against the <code>main</code> branch.
+- <strong>Security-First</strong>: Constant-time token verification, automated scanner honeypots, and hybrid datacenter/VPS crawler filtering.</p>
+<p>Legacy versions (e.g. 1.2.x Python implementation) are completely deprecated, incompatible, and unsupported. All contributions must target the Rust v1.3.x codebase on the <code>main</code> branch.</p>
+<hr />
+<h2>🛠️ Setting Up Your Development Environment</h2>
+<h3>Prerequisites</h3>
+<ul>
+<li><strong>Rust Toolchain</strong>: <code>rustc</code> and <code>cargo</code> (1.80+ recommended). Install via <a href="https://rustup.rs/">rustup.rs</a>.</li>
+<li><strong>Docker &amp; Docker Compose</strong>: For containerized verification and multi-arch testing.</li>
+<li><strong>OpenSSL / Development Headers</strong>: Standard development build tools (<code>build-essential</code>, <code>pkg-config</code>, <code>libssl-dev</code> on Debian/Ubuntu).</li>
+</ul>
+<h3>Quick Setup</h3>
+<ol>
+<li>
+<p><strong>Fork and clone the repository:</strong>
+   <code>bash
+   git clone https://github.com/betterix/league-voice-recorder-backend.git
+   cd league-voice-recorder-backend</code></p>
+</li>
+<li>
+<p><strong>Prepare environment configuration:</strong>
+   <code>bash
+   cp .env.example .env</code></p>
+</li>
+<li>
+<p><strong>Verify build and tests:</strong>
+   <code>bash
+   cargo check
+   cargo test</code></p>
+</li>
+<li>
+<p><strong>Run the local development server:</strong>
+   <code>bash
+   cargo run</code>
+   <em>Note: In development mode, the server automatically generates a temporary self-signed ECDSA certificate if no cert files are present.</em></p>
+</li>
+</ol>
+<hr />
+<h2>📋 Contribution Rules &amp; Engineering Standards</h2>
+<p>All pull requests and code modifications must uphold the following architectural constraints:</p>
+<h3>1. Bounded Memory Streaming</h3>
+<ul>
+<li><strong>Never</strong> read entire audio recordings into memory at once (e.g., avoid unbounded <code>tokio::fs::read</code>).</li>
+<li>Always stream audio files in chunks (<code>CHUNK_SIZE = 64 * 1024</code> / 64 KB) across uploads and downloads.</li>
+<li>Honor HTTP Range headers (<code>206 Partial Content</code>) for resumable downloads.</li>
+</ul>
+<h3>2. Constant-Time Authentication</h3>
+<ul>
+<li>Any token, password, or API key comparison must use constant-time algorithms (<code>subtle::ConstantTimeEq</code>) to prevent timing side-channel attacks.</li>
+</ul>
+<h3>3. Noise-Free Access Logging</h3>
+<ul>
+<li>Real-time access logging is enabled for all API requests (reporting client IP, HTTP method, path, status, and duration).</li>
+<li>Healthcheck requests (<code>/api/v1/health</code>) that return success must remain suppressed in stdout logs to eliminate Docker monitoring noise.</li>
+</ul>
+<h3>4. Atomic Storage &amp; Database Consistency</h3>
+<ul>
+<li>If a database transaction or metadata insert fails during an audio upload, the staged audio file on disk must be unlinked/deleted immediately in a rollback handler.</li>
+</ul>
+<h3>5. Zero External Web Dependencies</h3>
+<ul>
+<li>The embedded web dashboard (<code>/web</code>) must remain completely zero-dependency without external CDNs, Google Fonts, or external tracking scripts.</li>
+</ul>
+<h3>6. Secrets &amp; PII Discipline</h3>
+<ul>
+<li>Never commit real API keys, passwords, private keys, or actual user IP addresses.</li>
+<li>Use RFC 5737 documentation IP prefixes (<code>203.0.113.x</code> or <code>198.51.100.x</code>) in documentation, tests, and mock fixtures.</li>
+</ul>
+<hr />
+<h2>🧪 Quality Assurance &amp; CI Checklist</h2>
+<p>Before opening a pull request, run the following verification pipeline locally:</p>
+<pre><code class="language-bash"># 1. Format verification
+cargo fmt --check
+
+# 2. Strict linter check (zero warnings tolerated)
+cargo clippy -- -D warnings
+
+# 3. Complete automated test suite
+cargo test -- --nocapture
+</code></pre>
+<hr />
+<h2>🔄 Pull Request Process</h2>
+<ol>
+<li><strong>Branch Naming</strong>: Create a topic branch from <code>main</code>:
+   <code>bash
+   git checkout -b feature/my-new-feature
+   # or
+   git checkout -b fix/issue-description</code></li>
+<li><strong>Commit Messages</strong>: Write concise, descriptive commit messages.</li>
+<li><strong>Integration Tests</strong>: If adding an endpoint, security policy, or audio parsing rule, include automated tests under <code>tests/</code>.</li>
+<li><strong>Documentation</strong>: Update <a href="AGENTS.md">AGENTS.md</a>, <a href="#doc-readme" onclick="showPage('readme'); return false;">README.md</a>, or relevant chapters in <code>docs/</code> if your change modifies configuration, APIs, or architecture.</li>
+<li><strong>Open Pull Request</strong>: Submit your PR against <code>main</code>. Fill out the <a href=".github/PULL_REQUEST_TEMPLATE.md">Pull Request Template</a> completely.</li>
+</ol>
+        </div>
+      </section>
+    
+    </main>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        curve: 'basis',
+        padding: 24,
+        nodeSpacing: 50,
+        rankSpacing: 60
+      },
+      themeVariables: {
+        darkMode: true,
+        fontSize: '16px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        background: '#090e1a',
+        primaryColor: '#111827',
+        primaryTextColor: '#ffffff',
+        primaryBorderColor: '#10b981',
+        lineColor: '#06b6d4',
+        secondaryColor: '#182235',
+        tertiaryColor: '#1f293d'
+      }
+    });
+
+    function showPage(docId) {
+      document.querySelectorAll('.doc-page').forEach(page => page.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+
+      const target = document.getElementById('doc-' + docId);
+      const navBtn = document.getElementById('nav-btn-' + docId);
+      if (target) {
+        target.classList.add('active');
+        document.querySelector('.content-pane').scrollTop = 0;
+      }
+      if (navBtn) {
+        navBtn.classList.add('active');
+      }
+
+      setTimeout(() => {
+        mermaid.run({
+          nodes: document.querySelectorAll('#doc-' + docId + ' .mermaid')
+        });
+      }, 50);
+    }
+
+    function filterNav(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.nav-link').forEach(link => {
+        const text = link.innerText.toLowerCase();
+        link.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.markdown-body pre').forEach(pre => {
+        if (pre.closest('.mermaid-container')) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'code-copy-btn';
+        copyBtn.innerText = 'Copy';
+        copyBtn.onclick = () => {
+          const codeEl = pre.querySelector('code');
+          const code = codeEl ? codeEl.innerText : pre.innerText;
+          navigator.clipboard.writeText(code);
+          copyBtn.innerText = '✓ Copied!';
+          setTimeout(() => copyBtn.innerText = 'Copy', 2000);
+        };
+        wrapper.appendChild(copyBtn);
+      });
+
+      showPage('readme');
+    });
+  </script>
+</body>
+</html>
