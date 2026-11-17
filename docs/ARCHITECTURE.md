@@ -6,39 +6,23 @@ The **League Voice Recorder Backend** is a high-performance, asynchronous audio 
 
 ## 1. High-Level Design Principles
 
-```
-  +-------------------------------------------------------------------------+
-  |                               Direct Port Ingress (Port 8443)           |
-  |                        Native TLS 1.3 via axum-server + rustls          |
-  +-------------------------------------------------------------------------+
-                                       |
-                                       v
-  +-------------------------------------------------------------------------+
-  |                          Security & Bot Shield Middleware                |
-  |  - IP Block Verification (Persistent DB + Temporary sliding window)     |
-  |  - Instant Scanner / Exploit Probe Signature Detection                   |
-  |  - Hybrid Datacenter / VPS Bot Shield (In-memory cache + ip-api.com)    |
-  |  - Sliding-Window Rate Limiter (DashMap concurrent token tracker)       |
-  +-------------------------------------------------------------------------+
-                   |                                       |
-                   v                                       v
-  +---------------------------------+   +-----------------------------------+
-  |       Core Headless API         |   |      Cloaked Web Dashboard        |
-  |          `/api/v1`              |   |             `/web`                |
-  |  - 3-Key Header Authentication  |   |  - Whitelist IP Cloaking (404)    |
-  |  - Strict JSON REST Schemas     |   |  - HTTP Basic Auth                |
-  |  - Chunked Audio Streaming      |   |  - Embedded Zero-CDN Interface    |
-  +---------------------------------+   +-----------------------------------+
-                   \                                       /
-                    +-------------------------------------+
-                                       |
-                                       v
-  +-------------------------------------------------------------------------+
-  |                       Storage & Persistence Layer                       |
-  |  - Audio Storage: `<GAME_ID>.mp3` with atomic `.tmp` commit             |
-  |  - SQLite Database with WAL mode: `recordings`, `banned_ips`,           |
-  |    `ip_activity`, and `ip_intel` tables                                 |
-  +-------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    Ingress["🌐 Direct Port Ingress: Port 8443<br/>Native TLS 1.3 via axum-server and rustls"]
+    
+    Security["🛡️ Security and Bot Shield Middleware<br/>• IP Block Verification: Persistent DB and Sliding Window<br/>• Zero-Tolerance Scanner Probe Signature Detection<br/>• Hybrid Datacenter and VPS Bot Shield<br/>• Lock-Free Sliding-Window Rate Limiter DashMap"]
+    
+    API["📡 Core Headless REST API: /api/v1<br/>• 3-Key Header Authentication<br/>• Strict JSON REST Schemas<br/>• Chunked Audio Streaming 64 KB"]
+    
+    Web["🖥️ Cloaked Web Dashboard: /web<br/>• Whitelist IP Cloaking returning 404<br/>• HTTP Basic Auth Constant-Time<br/>• Zero-Dependency Embedded Interface"]
+    
+    Storage["💾 Storage and Persistence Layer<br/>• Audio Storage: game_id.mp3 with atomic rename commit<br/>• Hardened SQLite WAL Mode: recordings, banned_ips, ip_activity"]
+
+    Ingress --> Security
+    Security -->|Authorized API Traffic| API
+    Security -->|Whitelisted Admin Traffic| Web
+    API --> Storage
+    Web --> Storage
 ```
 
 ### 1.1 Direct Internet Exposure (Native TLS 1.3)
