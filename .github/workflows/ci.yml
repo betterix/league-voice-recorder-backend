@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, rust]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 🧪 Automated Tests & Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: ⚡ Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: 📦 Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: 🔍 Check Code Formatting
+        run: cargo fmt --check
+
+      - name: 🛡️ Clippy Linter Check
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: 🧪 Execute Cargo Test Suite
+        run: cargo test --verbose

@@ -1,7 +1,13 @@
+# Environment & secrets
 .env
 certs/
-
 data/
+
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# Python legacy caches
 __pycache__/
 .pytest_cache/
 .ruff_cache/
