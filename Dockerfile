@@ -1,45 +1,41 @@
 # =============================================================================
 # Stage 1: Build & Compilation Stage
 # =============================================================================
-FROM python:3.15-alpine AS builder
+FROM rust:alpine AS builder
 
 WORKDIR /build
 
-# Install build dependencies for compiling Python native wheels
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache \
-    gcc \
     musl-dev \
-    libffi-dev \
+    gcc \
+    make \
+    cmake \
     openssl-dev \
-    make
+    perl
 
-COPY requirements.txt .
+COPY Cargo.toml Cargo.lock* ./
+COPY src ./src
 
-# Install dependencies into isolated installation prefix
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
-
+RUN cargo build --release && \
+    strip target/release/league-voice-recorder-backend
 
 # =============================================================================
 # Stage 2: Hardened Minimal Production Runtime
 # =============================================================================
-FROM python:3.15-alpine
+FROM alpine:3.21
 
-# Metadata labels
 LABEL org.opencontainers.image.title="League Voice Recorder Backend" \
-    org.opencontainers.image.description="Centralized direct-port scrim audio backend for League Voice Recorder" \
-    org.opencontainers.image.version="1.0.0" \
+    org.opencontainers.image.description="High-performance centralized direct-port scrim audio backend for League Voice Recorder" \
+    org.opencontainers.image.version="1.2.1" \
     org.opencontainers.image.authors="League Voice Recorder Team" \
     org.opencontainers.image.licenses="GPL-3.0"
 
-# Install minimal runtime dependencies
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache \
     openssl \
-    curl \
-    ca-certificates
-
-RUN rm -rf /usr/local/lib/python*/site-packages/*
+    ca-certificates \
+    curl
 
 # Create secure non-root system user and group
 RUN addgroup -g 10001 -S appuser && \
@@ -47,28 +43,19 @@ RUN addgroup -g 10001 -S appuser && \
 
 WORKDIR /app
 
-# Copy installed Python packages from builder stage
-COPY --from=builder /install /usr/local
+# Copy compiled Rust static/optimized binary from builder stage
+COPY --from=builder /build/target/release/league-voice-recorder-backend /app/league-voice-recorder-backend
 
 # Create persistent storage directories with proper ownership
 RUN mkdir -p /app/data/recordings /app/data/db /app/certs && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chmod 750 /app/league-voice-recorder-backend
 
-# Copy application source code
-COPY --chown=appuser:appuser app ./app
-
-# Ensure storage directories are owned by appuser
-RUN chown -R appuser:appuser /app/data
-
-# Switch to non-root user
 USER appuser
 
-# Expose configurable direct HTTPS port
 EXPOSE 8443
 
-# Healthcheck testing direct TLS health endpoint with authenticated API key
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import os, urllib.request, ssl; port = os.environ.get('PORT', '8443'); key = os.environ.get('PULL_KEY') or os.environ.get('UPLOAD_KEY') or ''; req = urllib.request.Request(f'https://localhost:{port}/api/v1/health', headers={'X-API-Key': key}); ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE; urllib.request.urlopen(req, context=ctx, timeout=3)" || exit 1
+    CMD curl -k -s -f -H "X-API-Key: ${PULL_KEY:-${UPLOAD_KEY}}" "https://localhost:${PORT:-8443}/api/v1/health" > /dev/null || exit 1
 
-# Launch application server
-CMD ["python", "-m", "app.main"]
+ENTRYPOINT ["/app/league-voice-recorder-backend"]

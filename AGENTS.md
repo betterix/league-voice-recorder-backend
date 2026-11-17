@@ -1,4 +1,4 @@
-# AGENTS.md — League Voice Recorder Backend
+# AGENTS.md — League Voice Recorder Backend (Rust Edition)
 
 Welcome to the **League Voice Recorder Backend** developer and agent documentation. This document is tailored for AI agents, DevOps engineers, and backend developers to understand the architecture, security models, data flows, operational conventions, and extension guidelines for this codebase.
 
@@ -18,27 +18,28 @@ It enables competitive esports teams, players, coaches, and analysts to:
 
 ## 2. 🧭 Core Architecture & Design Principles
 
-### 2.1 Pure Headless Core API & Optional Cloaked Web Dashboard
-- **RESTful Headless API**: All core recording and sync API operations are versioned under `/api/v1` and strictly serialized via Pydantic schemas.
-- **Optional Cloaked Web Dashboard**: Zero-dependency embedded web interface at `/web` for browser review, playback, and manual uploads. Access is strictly IP-whitelisted and HTTP Basic Auth protected, returning `404 Not Found` for unauthorized IPs to cloak the endpoint from network scanners.
+### 2.1 Pure Headless Core API & Cloaked Web Dashboard
+- **RESTful Headless API**: All core recording and sync API operations are versioned under `/api/v1` and serialized via strongly-typed Serde structs.
+- **Cloaked Web Dashboard**: Zero-dependency embedded web interface at `/web` for browser review, playback, and manual uploads. Access is strictly IP-whitelisted and HTTP Basic Auth protected, returning `404 Not Found` for unauthorized IPs to cloak the endpoint from network scanners.
 
 ### 2.2 Direct-Port Ingress (Native TLS 1.3)
 - **Direct Internet Exposure**: Runs on direct port `8443` (TCP) over HTTPS.
-- **No Mandatory Reverse Proxy**: Uvicorn natively terminates TLS 1.3 with OpenSSL AEAD cipher suites (`TLS_AES_256_GCM_SHA384`, `TLS_CHACHA20_POLY1305_SHA256`).
+- **No Mandatory Reverse Proxy**: Axum natively terminates TLS 1.3 via `axum-server` and `rustls` using OpenSSL AEAD cipher suites (`TLS_AES_256_GCM_SHA384`, `TLS_CHACHA20_POLY1305_SHA256`).
 - **No CDN / Proxy Buffering**: Direct communication ensures large audio transfers (up to 250 MB) stream without intermediate upload truncations or proxy timeouts.
 - **Certificate Support**: Production Let's Encrypt certificates (`/app/certs/cert.pem`, `/app/certs/key.pem`) and development ECDSA self-signed certificate generation with persistent SANs.
 
 ### 2.3 Strict Three-Key Authentication
-All authenticated endpoints require the `X-API-Key` HTTP header:
+All authenticated API endpoints require the `X-API-Key` HTTP header:
 - `UPLOAD_KEY`: Scrimmage recording clients / players (Upload, Download, List, Metadata). Destructive delete attempts return `403 Forbidden`.
 - `PULL_KEY`: Analysts, coaches, and teammates (Download, List, Metadata). Write and delete attempts return `403 Forbidden`.
 - `ADMIN_KEY`: Master administrative key granting full read, write, delete, and telemetry access.
-- **Constant-Time Verification**: All secret comparisons use `secrets.compare_digest()` to eliminate timing attacks.
+- **Constant-Time Verification**: All secret comparisons use `subtle::ConstantTimeEq` to eliminate timing attacks.
 - **Brute-Force IP Protection**: 5 failed authentication attempts from any IP within 60 seconds trigger a temporary 10-minute block across all endpoints (`429 Too Many Requests`).
-- **Automated Scanner & Exploit Probe Defense**: Zero-tolerance signature detection (`/.env`, `/.git`, `/actuator`, `/console`, `PROPFIND`, etc.) triggers an instant 60-minute IP ban. Heuristic probe defense tracks unauthenticated client errors (404/405/400) and automatically bans scanning IPs upon reaching threshold (5 attempts in 60s). Configured `WEB_ALLOWED_IPS` management hosts and loopback addresses are exempt.
+- **Automated Scanner & Exploit Probe Defense**: Zero-tolerance signature detection (`/.env`, `/.git`, `/actuator`, `/console`, `PROPFIND`, etc.) triggers an instant permanent IP ban. Heuristic probe defense tracks unauthenticated client errors (404/405/400) and automatically bans scanning IPs upon reaching threshold (5 attempts in 60s). Configured `WEB_ALLOWED_IPS` management hosts and loopback addresses are exempt.
+- **Hybrid Datacenter / VPS Bot Shield**: Blocks automated crawler traffic from cloud hosts (DigitalOcean, AWS, Hetzner, OVH, Linode, etc.) via offline keyword checks and asynchronous `ip-api.com` categorization. Bypassed for authenticated API clients.
 
 ### 2.4 Hardened SQLite WAL Storage
-- SQLite configured with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`), `synchronous=NORMAL;`, and 30-second busy timeout for safe concurrent reads and writes.
+- SQLite configured via `sqlx::SqlitePool` with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`), `synchronous=NORMAL;`, and 30-second busy timeout for safe concurrent reads and writes.
 - Foreign keys enabled; query indexes on `game_id`, `team_tag`, and `created_at`.
 
 ---
@@ -47,43 +48,58 @@ All authenticated endpoints require the `X-API-Key` HTTP header:
 
 ```text
 league-voice-recorder-backend/
-├── app/
-│   ├── __init__.py           # Package version definition
-│   ├── config.py             # Pydantic Settings, environment validator, and security checks
-│   ├── security.py           # Role authorization, rate limiter, IP blocker, and key generation CLI
-│   ├── database.py           # SQLite engine, connection pragmas, and session management
-│   ├── models.py             # SQLAlchemy Declarative model for recordings
-│   ├── schemas.py            # Pydantic request & response schemas
-│   ├── storage.py            # MP3 chunked upload/streaming, Mutagen parsing, range requests
-│   ├── main.py               # FastAPI application factory, middleware, TLS listener
-│   ├── api/
-│   │   ├── __init__.py       # Router namespace
-│   │   ├── health.py         # Authenticated health & storage diagnostics
-│   │   └── recordings.py     # Endpoints: upload, list, get, download, delete
-│   └── web/
-│       ├── __init__.py       # Web package namespace
-│       ├── auth.py           # IP whitelisting & Basic Auth dependency
-│       ├── dashboard.html    # Zero-dependency modern dark UI
-│       ├── router.py         # Web dashboard, streaming, download, upload, delete
-│       └── views.py          # Dynamic template renderer
-├── certs/                    # Local mount point for TLS certificates (gitignored)
-├── tests/
-│   ├── __init__.py           # Test package
-│   ├── conftest.py           # Test fixtures, test DB, synthetic MP3 generator
-│   ├── test_security.py      # Auth, brute-force IP blocking, rate limits, TLS tests
-│   ├── test_upload.py        # Streaming upload, Mutagen validation, checksum tests
-│   ├── test_download.py      # Resumable range requests, partial content tests
-│   ├── test_api.py           # Health, query, search, and delete tests
-│   └── test_web.py           # Web dashboard, IP whitelist, basic auth tests
-├── .dockerignore             # Excludes .venv, data, certs from Docker build context
+├── Cargo.toml                # Project dependencies, build targets, and metadata
+├── Cargo.lock                # Deterministic dependency lockfile
+├── Dockerfile                # Multi-stage hardened Alpine container (UID 10001 appuser)
+├── docker-compose.yml        # Production Docker compose configuration
+├── .dockerignore             # Excludes target, certs, data from Docker build context
 ├── .env.example              # Clean configuration template with generic placeholders
-├── .gitignore                # Excludes secrets, certificates, data, and cache
-├── Dockerfile                # Multi-stage hardened Alpine container (UID 10001)
-├── docker-compose.yml        # Production compose configuration
-├── pyproject.toml            # Project dependencies, Ruff, and Pytest configuration
-├── requirements.txt          # Production package pins
+├── .gitignore                # Excludes secrets, certificates, target/, and data
 ├── README.md                 # User & deployment guide
-└── AGENTS.md                 # Agent and developer instruction manual
+├── AGENTS.md                 # Agent and developer instruction manual (this file)
+├── docs/                     # Modular documentation chapters
+│   ├── ARCHITECTURE.md       # High-level architecture, thread safety, state management
+│   ├── SECURITY_AND_BOT_SHIELD.md # Three-key auth, scanner/probe detection, hybrid VPS shield
+│   ├── AUDIO_PIPELINE.md     # MP3 chunked upload, validation, SHA-256, Range streaming
+│   ├── API_REFERENCE.md      # OpenAPI/REST endpoints reference
+│   ├── WEB_DASHBOARD.md      # Embedded cloaked UI and security operations
+│   └── DEPLOYMENT.md         # TLS setup, Docker, and production operations
+├── src/
+│   ├── main.rs               # Server startup, TLS listener, lifecycle hooks
+│   ├── lib.rs                # Core library definition and global middleware stack
+│   ├── config.rs             # Configuration validation and environment loader
+│   ├── db/
+│   │   ├── mod.rs            # Database connection pool (SqlitePool) & pragmas
+│   │   └── models.rs         # Database schema structs (Recording, BannedIP, etc.)
+│   ├── security/
+│   │   ├── mod.rs            # Security module root
+│   │   ├── auth.rs           # 3-key authentication & constant-time validation
+│   │   ├── rate_limiter.rs   # Sliding window rate limiter & brute force protection
+│   │   ├── scanner.rs        # Scanner probe signature detection & heuristic bans
+│   │   └── cert.rs           # TLS cert validation and dev ECDSA self-signed generation
+│   ├── bot_shield/
+│   │   ├── mod.rs            # Bot shield module root
+│   │   └── ip_intel.rs       # Hybrid Datacenter/VPS bot detection (offline + ip-api.com)
+│   ├── audio/
+│   │   ├── mod.rs            # Audio module root
+│   │   ├── mp3.rs            # Pure Rust MP3 frame parser, duration, bitrate, sample rate
+│   │   └── storage.rs        # Chunked streaming upload, hash computation, range streaming
+│   ├── api/
+│   │   ├── mod.rs            # API router (/api/v1)
+│   │   ├── health.rs         # GET /api/v1/health
+│   │   └── recordings.rs     # Upload, list, metadata, download, delete endpoints
+│   └── web/
+│       ├── mod.rs            # Web module router (/web)
+│       ├── auth.rs           # IP whitelist & HTTP Basic Auth
+│       ├── router.rs         # Dashboard endpoints, streaming, download, upload, security
+│       └── dashboard.html    # Zero-dependency modern dark dashboard template
+└── tests/
+    ├── common/mod.rs         # Test fixtures, mock MP3 generator, test app builder
+    ├── test_api.rs           # Health, query, pagination, delete tests
+    ├── test_upload.rs        # Streaming upload, sha256 validation, duplicate check
+    ├── test_download.rs      # Resumable range requests (206 Partial Content)
+    ├── test_security.rs      # 3-key auth, brute-force IP blocking, scanner probe detection
+    └── test_web.rs           # Web dashboard, basic auth, IP whitelisting
 ```
 
 ---
@@ -101,83 +117,59 @@ league-voice-recorder-backend/
 | **Upload Recording (MP3)** | `POST /api/v1/recordings/{game_id}` | ❌ *(403)* | ✅ | ✅ |
 | **Delete Recording** | `DELETE /api/v1/recordings/{game_id}` | ❌ *(403)* | ❌ *(403)* | ✅ |
 
-### Key Generation CLI
-To generate fresh, cryptographically secure 256-bit CSPRNG API keys:
-
-```bash
-uv run python -m app.security
-```
-
-Format of generated keys:
-- Upload: `lvr_upload_<32_random_urlsafe_bytes>`
-- Pull: `lvr_pull_<32_random_urlsafe_bytes>`
-- Admin: `lvr_admin_<32_random_urlsafe_bytes>`
-
-Tokens are placed in `.env` and are persistent across container restarts.
-
 ---
 
-## 5. 🎧 Audio Pipeline & Storage Mechanics
+## 5. 🛠️ Development & Testing Workflows
 
-### 5.1 Upload Pipeline (`app/storage.py`)
-1. **Game ID Sanitization**: Regex `^[a-zA-Z0-9_-]{1,64}$`. Directory traversal sequences (`..`, `/`, `\`) are rejected with `400 Bad Request`.
-2. **Duplicate Check**: Verifies whether `<game_id>.mp3` already exists on disk or database. Returns `409 Conflict` if present.
-3. **Streaming Chunked Write**: Writes in 64 KB chunks to a temporary file (`.tmp_<game_id>_<uuid>`).
-4. **Size Enforcement**: Aborts immediately with `413 Content Too Large` if bytes exceed `MAX_UPLOAD_MB`.
-5. **On-The-Fly SHA-256**: Incremental hash computation during upload. Verified against client-supplied `X-Checksum-SHA256` header (constant time).
-6. **MPEG Validation & Telemetry via Mutagen**: Parses MPEG audio frames using `mutagen.mp3.MP3`. Validates audio integrity and extracts duration, bitrate, and sample rate.
-7. **Atomic Rename & Cleanup**: Atomically moves `.tmp_*` to `<game_id>.mp3`. On any failure, temp files are unlinked to avoid orphaned disk usage.
-
-### 5.2 Resumable Downloads & HTTP Range Requests
-- Parses `Range: bytes=start-end`, `bytes=start-`, and suffix `bytes=-suffix`.
-- Valid ranges return `206 Partial Content` with `Content-Range: bytes start-end/total`.
-- Out-of-bounds ranges return `416 Range Not Satisfiable` with `Content-Range: bytes */total`.
-- Full downloads return `200 OK` with `Accept-Ranges: bytes` and `Content-Disposition: attachment; filename="<game_id>.mp3"`.
-
----
-
-## 6. 🛠️ Development & Testing Workflows
-
-### Environment Setup
+### Building the Project
 ```bash
-# Create virtual environment and install dependencies
-uv venv
-uv pip install -r requirements.txt
-uv pip install pytest pytest-asyncio httpx httpx2 coverage ruff
+# Check code compilation
+cargo check
+
+# Build debug binary
+cargo build
+
+# Build optimized production binary
+cargo build --release
 ```
 
 ### Running Automated Tests
 ```bash
-# Run pytest test suite
-uv run pytest -v
+# Run all unit and integration tests
+cargo test
 
-# Run with test coverage report
-uv run coverage run -m pytest
-uv run coverage report -m
+# Run a specific test suite
+cargo test --test test_api
+cargo test --test test_upload
+cargo test --test test_download
+cargo test --test test_security
+cargo test --test test_web
 ```
 
 ### Code Formatting & Quality
 ```bash
-# Check formatting and linting
-uv run ruff check .
-uv run ruff format --check .
+# Check formatting
+cargo fmt --check
 
-# Auto-fix linting and formatting
-uv run ruff check . --fix
-uv run ruff format .
+# Check clippy linter warnings
+cargo clippy -- -D warnings
+
+# Auto-format codebase
+cargo fmt
 ```
 
 ---
 
-## 7. 🤖 Guidelines for AI Agents Working on This Codebase
+## 6. 🤖 Guidelines for AI Agents Working on This Codebase
 
 When modifying or extending this service:
 
 1. **Maintain Secure Architecture**: Core audio APIs under `/api/v1` remain strictly headless RESTful JSON. The optional `/web` dashboard remains zero-dependency embedded without external CDN links or tracking scripts.
-2. **Preserve Direct-Port Native TLS**: Do not alter Uvicorn TLS 1.3 configuration to require an external reverse proxy.
-3. **Constant-Time Comparison**: Always use `secrets.compare_digest()` for any secret or token evaluation.
-4. **Bounded Memory Operations**: Never read entire audio files into memory (`file.read()` all at once). Always stream in chunks (`CHUNK_SIZE = 64 * 1024`).
+2. **Preserve Direct-Port Native TLS**: Do not alter Axum TLS 1.3 configuration to require an external reverse proxy.
+3. **Constant-Time Comparison**: Always use `subtle::ConstantTimeEq` for any secret or token evaluation.
+4. **Bounded Memory Operations**: Never read entire audio files into memory (`tokio::fs::read` all at once). Always stream in chunks (`CHUNK_SIZE = 64 * 1024`).
 5. **Database / Storage Consistency**: If database insertion fails during upload, always delete the corresponding file from disk in an exception rollback block.
-6. **No Real Secrets in Source Control**: Never commit active API keys, private keys, or `.env` files. Use generic placeholders in documentation.
-7. **Keep Test Coverage High**: Maintain >= 90% test coverage. Add tests for all newly introduced endpoints or validation logic.
-8. **Ruff Compliance**: Run `uv run ruff check .` and `uv run ruff format --check .` before concluding any modifications.
+6. **No Real Secrets or User IPs in Source Control**: Never commit active API keys, private keys, `.env` files, or user IP addresses. Use generic placeholders (`203.0.113.x` RFC 5737 documentation prefix) in documentation and tests.
+7. **Keep Test Coverage High**: Maintain 100% test pass rate across all suites in `tests/`. Add integration tests for all newly introduced endpoints or validation logic.
+8. **Clippy & Rustfmt Compliance**: Run `cargo clippy -- -D warnings` and `cargo fmt --check` before concluding any modifications.
+9. **Git Push Prohibition**: Never execute `git push` or push changes to remote repositories unless explicitly instructed by the user.
