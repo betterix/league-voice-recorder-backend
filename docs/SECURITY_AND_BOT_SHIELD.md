@@ -100,6 +100,7 @@ services:
       - ENABLE_FAIL2BAN=1
     cap_add:
       - NET_ADMIN
+    user: "0:0"
     volumes:
       - ./data/recordings:/app/data/recordings
       - ./data/db:/app/data/db

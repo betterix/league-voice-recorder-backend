@@ -19,4 +19,5 @@ services:
       - ./fail2ban-jail.local:/etc/fail2ban/jail.d/user-jail.local:ro
     cap_add:
       - NET_ADMIN
+    user: "0:0"
     read_only: false
