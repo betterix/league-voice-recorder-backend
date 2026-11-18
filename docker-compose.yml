@@ -12,6 +12,7 @@ services:
       - .env
     environment:
       - ENABLE_FAIL2BAN=${ENABLE_FAIL2BAN:-0}
+      - RUST_LOG=${RUST_LOG:-info,rustls=error}
     volumes:
       - ./data/recordings:/app/data/recordings
       - ./data/db:/app/data/db
