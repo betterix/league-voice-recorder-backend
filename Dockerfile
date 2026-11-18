@@ -63,6 +63,8 @@ RUN mkdir -p /app/data/recordings /app/data/db /app/certs /var/log/league-backen
     chown -R appuser:appuser /app /var/log/league-backend && \
     chmod 755 /app/league-voice-recorder-backend /app/entrypoint.sh
 
+USER appuser
+
 EXPOSE 8443
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
