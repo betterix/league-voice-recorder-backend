@@ -85,7 +85,7 @@ jobs:
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: 📤 Upload Digest Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: digests-${{ matrix.platform.name }}
           path: ${{ runner.temp }}/digests/*
@@ -99,7 +99,7 @@ jobs:
 
     steps:
       - name: 📥 Download all digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
