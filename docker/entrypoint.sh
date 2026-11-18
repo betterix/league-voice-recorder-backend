@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+# If a custom command was passed to the container, execute it directly
+if [ "$#" -gt 0 ] && [ "$1" != "/app/league-voice-recorder-backend" ]; then
+    exec "$@"
+fi
+
 # Only enable Fail2ban if explicitly requested via environment variable (ENABLE_FAIL2BAN=1 or true)
 if [ "${ENABLE_FAIL2BAN:-0}" = "1" ] || [ "${ENABLE_FAIL2BAN:-false}" = "true" ]; then
     echo "🔒 [Fail2ban] Initializing Fail2ban security service..."
@@ -44,13 +49,21 @@ if [ "${ENABLE_FAIL2BAN:-0}" = "1" ] || [ "${ENABLE_FAIL2BAN:-false}" = "true" ]
     }
     trap cleanup SIGTERM SIGINT
 
-    # Run the Rust backend as unprivileged appuser, streaming output to stdout and access.log
-    su-exec appuser /app/league-voice-recorder-backend 2>&1 | tee -a /var/log/league-backend/access.log &
+    # Run the Rust backend as unprivileged appuser (if capabilities permit su-exec) or directly
+    if su-exec appuser true 2>/dev/null; then
+        su-exec appuser /app/league-voice-recorder-backend "$@" 2>&1 | tee -a /var/log/league-backend/access.log &
+    else
+        /app/league-voice-recorder-backend "$@" 2>&1 | tee -a /var/log/league-backend/access.log &
+    fi
     CHILD_PID=$!
 
     wait "$CHILD_PID"
 else
-    # Fail2ban disabled: execute Rust backend directly as appuser (PID 1) with zero overhead
-    exec su-exec appuser /app/league-voice-recorder-backend
+    # Fail2ban disabled: execute Rust backend directly (PID 1) with zero overhead
+    if su-exec appuser true 2>/dev/null; then
+        exec su-exec appuser /app/league-voice-recorder-backend "$@"
+    else
+        exec /app/league-voice-recorder-backend "$@"
+    fi
 fi
 
