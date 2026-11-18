@@ -2,17 +2,21 @@ services:
   league-scrim-backend:
     container_name: league-scrim-backend
     image: league-scrim-backend:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "${PORT:-8443}:${PORT:-8443}"
     env_file:
       - .env
+    environment:
+      - ENABLE_FAIL2BAN=${ENABLE_FAIL2BAN:-0}
     volumes:
       - ./data/recordings:/app/data/recordings
       - ./data/db:/app/data/db
       - ./certs:/app/certs:ro
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+      - ./fail2ban-jail.local:/etc/fail2ban/jail.d/user-jail.local:ro
+    cap_add:
+      - NET_ADMIN
     read_only: false

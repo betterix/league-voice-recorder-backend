@@ -83,7 +83,7 @@ impl IPIntelService {
     pub fn new() -> Self {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_millis(1800))
-            .user_agent("LeagueVoiceRecorder/1.3.1 (Security Bot Classifier)")
+            .user_agent("LeagueVoiceRecorder/1.3.2 (Security Bot Classifier)")
             .build()
             .unwrap_or_default();
 

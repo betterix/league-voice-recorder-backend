@@ -15,7 +15,7 @@ Follow the private disclosure policy outlined in SECURITY.md instead.
 A clear and concise description of what the bug is.
 
 ### Version & Environment
-- **Backend Version**: (e.g., `1.3.1` — note: versions older than 1.3.x are unsupported)
+- **Backend Version**: (e.g., `1.3.2` — note: versions older than 1.3.x are unsupported)
 - **Deployment**: [e.g., Docker Compose / Native Binary / GHCR container]
 - **Target Architecture**: [e.g., linux/amd64, linux/arm64]
 - **Operating System**: [e.g., Ubuntu 24.04, Debian 12, Alpine Linux]

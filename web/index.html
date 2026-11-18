@@ -511,7 +511,7 @@
       </div>
       <div class="brand-text">
         <span class="brand-title">League Voice Recorder Backend</span>
-        <span class="brand-pill">Docs Hub v1.3.1</span>
+        <span class="brand-pill">Docs Hub v1.3.2</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1028,6 +1028,57 @@ cargo build --release
    Requests carrying a valid <code>X-API-Key</code> or originating from configured <code>WEB_ALLOWED_IPS</code> management hosts or local/private networks (<code>127.0.0.1</code>, RFC1918) are completely exempt from datacenter blocking.</p>
 </li>
 </ol>
+<hr />
+<h2>6. Container-Level Fail2ban Integration (<code>ENABLE_FAIL2BAN</code>)</h2>
+<p>For environments requiring active kernel/firewall packet rejection directly inside the container, an optional <strong>Fail2ban service</strong> is integrated into the production image.</p>
+<h3>6.1 Conditional Activation (Disabled by Default)</h3>
+<p>To preserve the minimal 1.35 MiB resident footprint, Fail2ban is <strong>strictly optional and only starts if explicitly enabled</strong>:
+- <strong>Disabled (<code>ENABLE_FAIL2BAN=0</code> or omitted)</strong>: The container entrypoint executes the Rust binary directly as unprivileged <code>appuser</code> (PID 1) with zero daemon overhead.
+- <strong>Enabled (<code>ENABLE_FAIL2BAN=1</code> or <code>true</code>)</strong>: The entrypoint boots <code>fail2ban-server</code> in the background, sets up graceful shutdown traps, and streams structured access logs to <code>/var/log/league-backend/access.log</code>.</p>
+<h3>6.2 Docker Compose Configuration</h3>
+<p>To enable Fail2ban, provide <code>ENABLE_FAIL2BAN=1</code> and <code>cap_add: [NET_ADMIN]</code> in your <code>docker-compose.yml</code>:</p>
+<pre><code class="language-yaml">services:
+  league-scrim-backend:
+    image: ghcr.io/betterix/league-voice-recorder-backend:latest
+    environment:
+      - ENABLE_FAIL2BAN=1
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./data/recordings:/app/data/recordings
+      - ./data/db:/app/data/db
+      - ./certs:/app/certs:ro
+      - ./fail2ban-jail.local:/etc/fail2ban/jail.d/user-jail.local:ro
+</code></pre>
+<h3>6.3 Custom Jail Overrides (<code>fail2ban-jail.local</code>)</h3>
+<p>Following the <a href="https://github.com/docker-mailserver/docker-mailserver">Docker Mailserver</a> configuration pattern, user overrides can be mounted into <code>/etc/fail2ban/jail.d/user-jail.local:ro</code>:</p>
+<pre><code class="language-ini">[DEFAULT]
+bantime  = 1d
+bantime.increment = true
+bantime.multipliers = 1 2 4 8 16 32 64
+bantime.maxtime = 4w
+findtime = 10m
+maxretry = 3
+ignoreip = 127.0.0.1/8 ::1
+
+[league-backend]
+enabled  = true
+port     = 8443
+filter   = league-backend
+logpath  = /var/log/league-backend/access.log
+maxretry = 3
+findtime = 10m
+bantime  = 1d
+</code></pre>
+<h3>6.4 How It Works</h3>
+<ol>
+<li>Axum structured access logs stream to <code>/var/log/league-backend/access.log</code>.</li>
+<li>Fail2ban's <code>league-backend</code> filter continuously parses for authentication failures and repeated client errors (<code>401</code>, <code>403</code>, <code>429</code>).</li>
+<li>Upon exceeding <code>maxretry</code> (default: 3 failures within 10 minutes), Fail2ban inserts an <code>iptables</code> rule into the <code>f2b-league-backend</code> chain:
+   <code>text
+   REJECT all -- 203.0.113.88  0.0.0.0/0  reject-with icmp-port-unreachable</code></li>
+<li>Blocked packets are rejected at the container's network stack before initiating TLS 1.3 handshakes.</li>
+</ol>
         </div>
       </section>
     
@@ -1159,7 +1210,7 @@ cargo build --release
 </ul>
 <pre><code class="language-json">{
   &quot;status&quot;: &quot;ok&quot;,
-  &quot;version&quot;: &quot;1.3.1&quot;,
+  &quot;version&quot;: &quot;1.3.2&quot;,
   &quot;authenticated_role&quot;: &quot;pull&quot;,
   &quot;storage_total_bytes&quot;: 104857600000,
   &quot;storage_used_bytes&quot;: 12582912000,

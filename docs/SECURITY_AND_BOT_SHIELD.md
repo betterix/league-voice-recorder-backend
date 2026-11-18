@@ -77,3 +77,64 @@ The backend employs a two-tier hybrid classifier:
 
 4. **Bypass Policy**:
    Requests carrying a valid `X-API-Key` or originating from configured `WEB_ALLOWED_IPS` management hosts or local/private networks (`127.0.0.1`, RFC1918) are completely exempt from datacenter blocking.
+
+---
+
+## 6. Container-Level Fail2ban Integration (`ENABLE_FAIL2BAN`)
+
+For environments requiring active kernel/firewall packet rejection directly inside the container, an optional **Fail2ban service** is integrated into the production image.
+
+### 6.1 Conditional Activation (Disabled by Default)
+To preserve the minimal 1.35 MiB resident footprint, Fail2ban is **strictly optional and only starts if explicitly enabled**:
+- **Disabled (`ENABLE_FAIL2BAN=0` or omitted)**: The container entrypoint executes the Rust binary directly as unprivileged `appuser` (PID 1) with zero daemon overhead.
+- **Enabled (`ENABLE_FAIL2BAN=1` or `true`)**: The entrypoint boots `fail2ban-server` in the background, sets up graceful shutdown traps, and streams structured access logs to `/var/log/league-backend/access.log`.
+
+### 6.2 Docker Compose Configuration
+To enable Fail2ban, provide `ENABLE_FAIL2BAN=1` and `cap_add: [NET_ADMIN]` in your `docker-compose.yml`:
+
+```yaml
+services:
+  league-scrim-backend:
+    image: ghcr.io/betterix/league-voice-recorder-backend:latest
+    environment:
+      - ENABLE_FAIL2BAN=1
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./data/recordings:/app/data/recordings
+      - ./data/db:/app/data/db
+      - ./certs:/app/certs:ro
+      - ./fail2ban-jail.local:/etc/fail2ban/jail.d/user-jail.local:ro
+```
+
+### 6.3 Custom Jail Overrides (`fail2ban-jail.local`)
+Following the [Docker Mailserver](https://github.com/docker-mailserver/docker-mailserver) configuration pattern, user overrides can be mounted into `/etc/fail2ban/jail.d/user-jail.local:ro`:
+
+```ini
+[DEFAULT]
+bantime  = 1d
+bantime.increment = true
+bantime.multipliers = 1 2 4 8 16 32 64
+bantime.maxtime = 4w
+findtime = 10m
+maxretry = 3
+ignoreip = 127.0.0.1/8 ::1
+
+[league-backend]
+enabled  = true
+port     = 8443
+filter   = league-backend
+logpath  = /var/log/league-backend/access.log
+maxretry = 3
+findtime = 10m
+bantime  = 1d
+```
+
+### 6.4 How It Works
+1. Axum structured access logs stream to `/var/log/league-backend/access.log`.
+2. Fail2ban's `league-backend` filter continuously parses for authentication failures and repeated client errors (`401`, `403`, `429`).
+3. Upon exceeding `maxretry` (default: 3 failures within 10 minutes), Fail2ban inserts an `iptables` rule into the `f2b-league-backend` chain:
+   ```text
+   REJECT all -- 203.0.113.88  0.0.0.0/0  reject-with icmp-port-unreachable
+   ```
+4. Blocked packets are rejected at the container's network stack before initiating TLS 1.3 handshakes.

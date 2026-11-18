@@ -1,0 +1,28 @@
+# Custom fail2ban jail overrides for league-voice-recorder-backend
+# Mounted to /etc/fail2ban/jail.d/user-jail.local:ro (just like in docker-mailserver)
+
+[DEFAULT]
+# How long an offending IP stays banned (in seconds). 1d = 86400
+bantime  = 1d
+# Escalate ban time on repeat offenders
+bantime.increment = true
+bantime.multipliers = 1 2 4 8 16 32 64
+bantime.maxtime = 4w
+
+# Window in which "maxretry" failures must occur to trigger a ban
+findtime = 10m
+
+# Number of failures allowed before ban
+maxretry = 3
+
+# Never ban localhost
+ignoreip = 127.0.0.1/8 ::1
+
+[league-backend]
+enabled  = true
+port     = 8443
+filter   = league-backend
+logpath  = /var/log/league-backend/access.log
+maxretry = 3
+findtime = 10m
+bantime  = 1d
