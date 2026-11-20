@@ -81,9 +81,13 @@ impl Default for IPIntelService {
 
 impl IPIntelService {
     pub fn new() -> Self {
+        let user_agent = format!(
+            "LeagueVoiceRecorder/{} (Security Bot Classifier)",
+            env!("CARGO_PKG_VERSION")
+        );
         let client = reqwest::Client::builder()
             .timeout(Duration::from_millis(1800))
-            .user_agent("LeagueVoiceRecorder/1.3.2 (Security Bot Classifier)")
+            .user_agent(user_agent)
             .build()
             .unwrap_or_default();
 
