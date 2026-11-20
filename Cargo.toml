@@ -7,7 +7,7 @@ license = "AGPL-3.0-or-later"
 description = "High-performance centralized remote audio storage service for League Voice Recorder"
 
 [dependencies]
-tokio = { version = "1.42", features = ["full"] }
+tokio = { version = "1.54", features = ["full"] }
 axum = { version = "0.8", features = ["multipart", "matched-path"] }
 axum-server = { version = "0.9", features = ["tls-rustls"] }
 rustls = { version = "0.23", features = ["ring"] }
@@ -19,22 +19,22 @@ chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.11"
 hex = "0.4"
 subtle = "2.6"
-regex = "1.11"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-uuid = { version = "1.11", features = ["v4", "fast-rng"] }
+regex = "1.13"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+uuid = { version = "1.29", features = ["v4", "fast-rng"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time", "fmt"] }
 rcgen = "0.14"
-dashmap = "6.1"
+dashmap = "6.2"
 base64 = "0.23"
 sysinfo = "0.40"
 futures-util = "0.3"
 tokio-util = { version = "0.7", features = ["io"] }
 dotenvy = "0.15"
 thiserror = "2.0"
-bytes = "1.10"
+bytes = "1.12"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
-tempfile = "3.17"
+tempfile = "3.27"
