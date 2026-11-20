@@ -46,14 +46,20 @@ if [ "${ENABLE_FAIL2BAN:-0}" = "1" ] || [ "${ENABLE_FAIL2BAN:-false}" = "true" ]
         if [ -n "$CHILD_PID" ]; then
             kill -TERM "$CHILD_PID" 2>/dev/null || true
         fi
+        pkill -P $$ 2>/dev/null || true
     }
     trap cleanup SIGTERM SIGINT
 
-    # Run the Rust backend as unprivileged appuser (if capabilities permit su-exec) or directly
+    # Run the Rust backend as unprivileged appuser (if capabilities permit su-exec) or directly.
+    # We pipe stdout through tee, stripping ANSI escape codes with immediate line flushing
+    # before appending to access.log so docker logs retains full terminal colors while Fail2ban
+    # receives real-time clean plain text.
     if su-exec appuser true 2>/dev/null; then
-        su-exec appuser /app/league-voice-recorder-backend "$@" 2>&1 | tee -a /var/log/league-backend/access.log &
+        su-exec appuser /app/league-voice-recorder-backend "$@" 2>&1 \
+            | tee >(awk '{ gsub(/\x1b\[[0-9;]*m/, ""); print; fflush(); }' >> /var/log/league-backend/access.log) &
     else
-        /app/league-voice-recorder-backend "$@" 2>&1 | tee -a /var/log/league-backend/access.log &
+        /app/league-voice-recorder-backend "$@" 2>&1 \
+            | tee >(awk '{ gsub(/\x1b\[[0-9;]*m/, ""); print; fflush(); }' >> /var/log/league-backend/access.log) &
     fi
     CHILD_PID=$!
 
