@@ -1,16 +1,16 @@
+use axum::Json;
 use axum::extract::{Multipart, Path as AxumPath, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
+use crate::AppState;
 use crate::audio::storage::{
     build_range_download_response, delete_recording_file, stream_save_upload, validate_game_id,
 };
-use crate::db::models::{now_iso, Recording, RecordingMetadataResponse};
-use crate::security::{authenticate_key, Role};
-use crate::AppState;
+use crate::db::models::{Recording, RecordingMetadataResponse, now_iso};
+use crate::security::{Role, authenticate_key};
 
 #[derive(Debug, Deserialize)]
 pub struct ListRecordingsQuery {
@@ -317,46 +317,52 @@ pub async fn upload_recording(
         )
     })? {
         let name = field.name().unwrap_or("").to_string();
-        if name == "file" {
-            let res = stream_save_upload(
-                field,
-                &clean_id,
-                expected_sha256.as_deref(),
-                &state.config.storage_dir,
-                state.config.max_upload_bytes(),
-                state.config.max_upload_mb,
-            )
-            .await
-            .map_err(|e| {
-                let err_str = e.to_string();
-                let resp: Response = e.into_response();
-                (
-                    resp.status(),
-                    Json(serde_json::json!({ "detail": err_str })),
+        match name.as_str() {
+            "file" => {
+                let res = stream_save_upload(
+                    field,
+                    &clean_id,
+                    expected_sha256.as_deref(),
+                    &state.config.storage_dir,
+                    state.config.max_upload_bytes(),
+                    state.config.max_upload_mb,
                 )
-            })?;
-            upload_processed = Some(res);
-        } else if name == "team_tag" {
-            if let Ok(text) = field.text().await {
-                let trimmed = text.trim();
-                if !trimmed.is_empty() {
-                    team_tag = Some(trimmed.to_string());
+                .await
+                .map_err(|e| {
+                    let err_str = e.to_string();
+                    let resp: Response = e.into_response();
+                    (
+                        resp.status(),
+                        Json(serde_json::json!({ "detail": err_str })),
+                    )
+                })?;
+                upload_processed = Some(res);
+            }
+            "team_tag" => {
+                if let Ok(text) = field.text().await {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        team_tag = Some(trimmed.to_string());
+                    }
                 }
             }
-        } else if name == "notes" {
-            if let Ok(text) = field.text().await {
-                let trimmed = text.trim();
-                if !trimmed.is_empty() {
-                    notes = Some(trimmed.to_string());
+            "notes" => {
+                if let Ok(text) = field.text().await {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        notes = Some(trimmed.to_string());
+                    }
                 }
             }
-        } else if name == "match_date" {
-            if let Ok(text) = field.text().await {
-                let trimmed = text.trim();
-                if !trimmed.is_empty() {
-                    match_date = Some(trimmed.to_string());
+            "match_date" => {
+                if let Ok(text) = field.text().await {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        match_date = Some(trimmed.to_string());
+                    }
                 }
             }
+            _ => {}
         }
     }
 

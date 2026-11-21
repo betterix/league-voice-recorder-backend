@@ -1,8 +1,8 @@
 pub mod auth;
 pub mod router;
 
-use axum::routing::{delete, get, post};
 use axum::Router;
+use axum::routing::{delete, get, post};
 
 use crate::AppState;
 

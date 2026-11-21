@@ -1,14 +1,14 @@
-use axum::extract::{Extension, Multipart, Path as AxumPath, Query, State};
-use axum::http::{header, HeaderMap, StatusCode};
-use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
+use axum::extract::{Extension, Multipart, Path as AxumPath, Query, State};
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::{Html, IntoResponse, Response};
 use serde::Deserialize;
 use tracing::warn;
 
 use crate::audio::storage::{
     build_range_download_response, delete_recording_file, stream_save_upload, validate_game_id,
 };
-use crate::db::models::{now_iso, IPActivity, Recording, RecordingMetadataResponse};
+use crate::db::models::{IPActivity, Recording, RecordingMetadataResponse, now_iso};
 use crate::web::auth::{extract_basic_auth, is_web_ip_allowed, verify_basic_auth};
 use crate::{AppState, ClientIp};
 
@@ -454,32 +454,37 @@ pub async fn web_upload_recording(
             .into_response()
     })? {
         let name = field.name().unwrap_or("").to_string();
-        if name == "file" {
-            let res = stream_save_upload(
-                field,
-                &clean_id,
-                None,
-                &state.config.storage_dir,
-                state.config.max_upload_bytes(),
-                state.config.max_upload_mb,
-            )
-            .await
-            .map_err(|e| e.into_response())?;
-            upload_processed = Some(res);
-        } else if name == "team_tag" {
-            if let Ok(text) = field.text().await {
-                let trimmed = text.trim();
-                if !trimmed.is_empty() {
-                    team_tag = Some(trimmed.to_uppercase());
+        match name.as_str() {
+            "file" => {
+                let res = stream_save_upload(
+                    field,
+                    &clean_id,
+                    None,
+                    &state.config.storage_dir,
+                    state.config.max_upload_bytes(),
+                    state.config.max_upload_mb,
+                )
+                .await
+                .map_err(|e| e.into_response())?;
+                upload_processed = Some(res);
+            }
+            "team_tag" => {
+                if let Ok(text) = field.text().await {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        team_tag = Some(trimmed.to_uppercase());
+                    }
                 }
             }
-        } else if name == "notes" {
-            if let Ok(text) = field.text().await {
-                let trimmed = text.trim();
-                if !trimmed.is_empty() {
-                    notes = Some(trimmed.to_string());
+            "notes" => {
+                if let Ok(text) = field.text().await {
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        notes = Some(trimmed.to_string());
+                    }
                 }
             }
+            _ => {}
         }
     }
 

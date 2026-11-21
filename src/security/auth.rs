@@ -40,10 +40,10 @@ pub fn authenticate_key(provided_key: Option<&str>, config: &Config) -> Option<R
     let key = provided_key?;
 
     // Check ADMIN_KEY first if configured
-    if let Some(admin_key) = &config.admin_key {
-        if verify_secret_constant_time(Some(key), Some(admin_key)) {
-            return Some(Role::Admin);
-        }
+    if let Some(admin_key) = &config.admin_key
+        && verify_secret_constant_time(Some(key), Some(admin_key))
+    {
+        return Some(Role::Admin);
     }
 
     // Check UPLOAD_KEY

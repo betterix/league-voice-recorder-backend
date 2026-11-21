@@ -5,8 +5,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info};
 
-use crate::db::models::now_iso;
 use crate::db::DbPool;
+use crate::db::models::now_iso;
 
 pub const DATACENTER_KEYWORDS: &[&str] = &[
     "digitalocean",
@@ -144,61 +144,62 @@ impl IPIntelService {
         let url = format!(
             "http://ip-api.com/json/{ip}?fields=status,message,country,isp,org,as,hosting,proxy"
         );
-        if let Ok(resp) = self.client.get(&url).send().await {
-            if let Ok(json) = resp.json::<serde_json::Value>().await {
-                if json.get("status").and_then(|s| s.as_str()) == Some("success") {
-                    let isp = json
-                        .get("isp")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    let org = json
-                        .get("org")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    let as_info = json
-                        .get("as")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    let country = json
-                        .get("country")
-                        .and_then(|s| s.as_str())
-                        .unwrap_or("")
-                        .to_string();
+        if let Ok(resp) = self.client.get(&url).send().await
+            && let Ok(json) = resp.json::<serde_json::Value>().await
+            && json.get("status").and_then(|s| s.as_str()) == Some("success")
+        {
+            let isp = json
+                .get("isp")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
+            let org = json
+                .get("org")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
+            let as_info = json
+                .get("as")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
+            let country = json
+                .get("country")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
 
-                    let is_hosting = json
-                        .get("hosting")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false)
-                        || json.get("proxy").and_then(|v| v.as_bool()).unwrap_or(false);
+            let is_hosting = json
+                .get("hosting")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+                || json.get("proxy").and_then(|v| v.as_bool()).unwrap_or(false);
 
-                    let full_text = format!("{isp} {org} {as_info}").to_lowercase();
-                    let keyword_match = DATACENTER_KEYWORDS.iter().any(|kw| full_text.contains(kw));
+            let full_text = format!("{isp} {org} {as_info}").to_lowercase();
+            let keyword_match = DATACENTER_KEYWORDS.iter().any(|kw| full_text.contains(kw));
 
-                    let is_dc = is_hosting || keyword_match;
-                    let provider = if !org.is_empty() {
-                        org.clone()
-                    } else if !isp.is_empty() {
-                        isp.clone()
-                    } else {
-                        "Hosting Network".to_string()
-                    };
+            let is_dc = is_hosting || keyword_match;
+            let provider = if !org.is_empty() {
+                org.clone()
+            } else if !isp.is_empty() {
+                isp.clone()
+            } else {
+                "Hosting Network".to_string()
+            };
 
-                    let intel = CachedIntel {
-                        is_datacenter: is_dc,
-                        isp: isp.clone(),
-                        org: org.clone(),
-                        as_info: as_info.clone(),
-                        country: country.clone(),
-                    };
+            let intel = CachedIntel {
+                is_datacenter: is_dc,
+                isp: isp.clone(),
+                org: org.clone(),
+                as_info: as_info.clone(),
+                country: country.clone(),
+            };
 
-                    self.cache.insert(ip.to_string(), intel);
+            self.cache.insert(ip.to_string(), intel);
 
-                    if let Some(p) = pool {
-                        let now_str = now_iso();
-                        let _ = sqlx::query(
+            if let Some(p) = pool {
+                let now_str = now_iso();
+                let _ = sqlx::query(
                             r#"
                             INSERT INTO ip_intel (ip, is_datacenter, isp, org, as_info, country, created_at)
                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
@@ -214,18 +215,16 @@ impl IPIntelService {
                         .bind(&now_str)
                         .execute(p)
                         .await;
-                    }
-
-                    if is_dc {
-                        info!(
-                            "🚫 Datacenter/VPS IP identified: {} ({}, {})",
-                            ip, provider, country
-                        );
-                    }
-
-                    return (is_dc, provider);
-                }
             }
+
+            if is_dc {
+                info!(
+                    "🚫 Datacenter/VPS IP identified: {} ({}, {})",
+                    ip, provider, country
+                );
+            }
+
+            return (is_dc, provider);
         }
 
         // Fail-safe fallback if external lookup times out or fails

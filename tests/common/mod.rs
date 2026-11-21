@@ -1,7 +1,7 @@
+use axum::Router;
 use axum::body::Body;
 use axum::http::Request;
 use axum::response::Response;
-use axum::Router;
 use std::sync::Arc;
 use tower::ServiceExt;
 
@@ -9,7 +9,7 @@ use league_voice_recorder_backend::bot_shield::IPIntelService;
 use league_voice_recorder_backend::config::Config;
 use league_voice_recorder_backend::db::init_db;
 use league_voice_recorder_backend::security::InMemoryRateLimiter;
-use league_voice_recorder_backend::{create_app, AppState};
+use league_voice_recorder_backend::{AppState, create_app};
 
 pub const TEST_UPLOAD_KEY: &str = "test-upload-key-secure-random-123456";
 pub const TEST_PULL_KEY: &str = "test-pull-key-secure-random-654321";

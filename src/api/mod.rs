@@ -1,8 +1,8 @@
 pub mod health;
 pub mod recordings;
 
-use axum::routing::get;
 use axum::Router;
+use axum::routing::get;
 
 use crate::AppState;
 

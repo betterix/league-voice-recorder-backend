@@ -6,7 +6,7 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use common::{build_multipart, generate_valid_mp3_bytes, TestApp, TEST_PULL_KEY, TEST_UPLOAD_KEY};
+use common::{TEST_PULL_KEY, TEST_UPLOAD_KEY, TestApp, build_multipart, generate_valid_mp3_bytes};
 
 #[tokio::test]
 async fn test_large_mp3_streaming_upload() {

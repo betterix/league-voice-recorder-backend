@@ -4,8 +4,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{info, warn};
 
-use crate::db::models::now_iso;
 use crate::db::DbPool;
+use crate::db::models::now_iso;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersistentBanInfo {
@@ -229,10 +229,10 @@ impl InMemoryRateLimiter {
                 .bind(ip)
                 .execute(p)
                 .await;
-            if let Ok(rows) = res {
-                if rows.rows_affected() > 0 {
-                    removed_perm = true;
-                }
+            if let Ok(rows) = res
+                && rows.rows_affected() > 0
+            {
+                removed_perm = true;
             }
         }
 

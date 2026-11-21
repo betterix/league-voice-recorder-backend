@@ -1,5 +1,5 @@
 use axum::body::Body;
-use axum::http::{header, HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use futures_util::StreamExt;
 use regex::Regex;
@@ -12,7 +12,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, SeekFrom};
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
-use super::mp3::{parse_mp3_file, AudioInfo};
+use super::mp3::{AudioInfo, parse_mp3_file};
 
 static GAME_ID_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_-]{1,64}$").unwrap());
@@ -25,7 +25,9 @@ pub enum StorageError {
     EmptyGameId,
     #[error("Invalid Game ID: Directory traversal characters are forbidden")]
     DirectoryTraversal,
-    #[error("Invalid Game ID format: Allowed characters are alphanumeric, underscores, and hyphens (1-64 chars)")]
+    #[error(
+        "Invalid Game ID format: Allowed characters are alphanumeric, underscores, and hyphens (1-64 chars)"
+    )]
     InvalidFormat,
     #[error("Security violation: Path escapes configured storage directory")]
     EscapesStorage,
@@ -321,10 +323,10 @@ pub async fn build_range_download_response(
 }
 
 pub async fn delete_recording_file(game_id: &str, storage_dir: &Path) -> bool {
-    if let Ok(path) = get_recording_path(game_id, storage_dir) {
-        if path.exists() {
-            return tokio::fs::remove_file(path).await.is_ok();
-        }
+    if let Ok(path) = get_recording_path(game_id, storage_dir)
+        && path.exists()
+    {
+        return tokio::fs::remove_file(path).await.is_ok();
     }
     false
 }

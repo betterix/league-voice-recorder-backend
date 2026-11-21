@@ -9,7 +9,7 @@ pub mod security;
 pub mod web;
 
 use axum::extract::{ConnectInfo, DefaultBodyLimit, Extension, Request, State};
-use axum::http::{header, StatusCode};
+use axum::http::{StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
@@ -22,7 +22,7 @@ use crate::bot_shield::IPIntelService;
 use crate::config::Config;
 use crate::db::DbPool;
 use crate::security::{
-    authenticate_key, is_scanner_probe, is_trusted_ip, log_activity_event, InMemoryRateLimiter,
+    InMemoryRateLimiter, authenticate_key, is_scanner_probe, is_trusted_ip, log_activity_event,
 };
 use crate::web::auth::is_web_ip_allowed;
 

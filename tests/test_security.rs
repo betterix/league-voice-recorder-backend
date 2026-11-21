@@ -1,9 +1,9 @@
 mod common;
 
 use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 
-use common::{TestApp, TEST_UPLOAD_KEY};
+use common::{TEST_UPLOAD_KEY, TestApp};
 
 #[tokio::test]
 async fn test_scanner_probe_instant_ban() {

@@ -1,11 +1,11 @@
 mod common;
 
 use axum::body::Body;
-use axum::http::{header, Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use serde_json::Value;
 
-use common::{TestApp, TEST_WEB_PASS, TEST_WEB_USER};
+use common::{TEST_WEB_PASS, TEST_WEB_USER, TestApp};
 
 fn basic_auth_header(user: &str, pass: &str) -> String {
     let combined = format!("{user}:{pass}");

@@ -7,9 +7,9 @@ use league_voice_recorder_backend::bot_shield::IPIntelService;
 use league_voice_recorder_backend::config::Config;
 use league_voice_recorder_backend::db::init_db;
 use league_voice_recorder_backend::security::{
-    generate_self_signed_cert, validate_tls_certificates, InMemoryRateLimiter,
+    InMemoryRateLimiter, generate_self_signed_cert, validate_tls_certificates,
 };
-use league_voice_recorder_backend::{create_app, AppState};
+use league_voice_recorder_backend::{AppState, create_app};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

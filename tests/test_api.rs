@@ -5,7 +5,7 @@ use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde_json::Value;
 
-use common::{TestApp, TEST_ADMIN_KEY, TEST_PULL_KEY, TEST_UPLOAD_KEY};
+use common::{TEST_ADMIN_KEY, TEST_PULL_KEY, TEST_UPLOAD_KEY, TestApp};
 
 #[tokio::test]
 async fn test_health_check_permissions() {

@@ -2,8 +2,8 @@ use regex::Regex;
 use std::net::IpAddr;
 use std::sync::LazyLock;
 
-use crate::db::models::now_iso;
 use crate::db::DbPool;
+use crate::db::models::now_iso;
 
 pub static SCANNER_PROBE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
@@ -53,10 +53,10 @@ pub fn is_trusted_ip(client_ip: &str, allowed_ips_str: &str) -> bool {
         return true;
     }
 
-    if let Ok(addr) = client_ip.parse::<IpAddr>() {
-        if addr.is_loopback() {
-            return true;
-        }
+    if let Ok(addr) = client_ip.parse::<IpAddr>()
+        && addr.is_loopback()
+    {
+        return true;
     }
 
     if allowed_ips_str.is_empty() {
