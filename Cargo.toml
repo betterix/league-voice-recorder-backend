@@ -1,6 +1,6 @@
 [package]
 name = "league-voice-recorder-backend"
-version = "1.3.3"
+version = "1.3.4"
 edition = "2024"
 authors = ["Betterix"]
 license = "AGPL-3.0-or-later"
