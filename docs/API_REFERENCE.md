@@ -14,7 +14,7 @@ Returns runtime health status, version, storage capacity, and total recording co
 ```json
 {
   "status": "ok",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "authenticated_role": "pull",
   "storage_total_bytes": 104857600000,
   "storage_used_bytes": 12582912000,

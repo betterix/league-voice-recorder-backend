@@ -56,7 +56,7 @@ All authenticated API endpoints require the `X-API-Key` HTTP header:
 
 ```text
 league-voice-recorder-backend/
-├── Cargo.toml                # Project dependencies, build targets, and metadata (v1.3.4)
+├── Cargo.toml                # Project dependencies, build targets, and metadata (v1.3.x)
 ├── Cargo.lock                # Deterministic dependency lockfile
 ├── Dockerfile                # Multi-stage hardened Alpine container (UID 10001 appuser)
 ├── docker-compose.yml        # Production Docker compose configuration

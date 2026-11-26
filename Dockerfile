@@ -25,9 +25,11 @@ RUN cargo build --release && \
 # =============================================================================
 FROM alpine:3.24
 
+ARG APP_VERSION=1.3.5
+
 LABEL org.opencontainers.image.title="League Voice Recorder Backend" \
     org.opencontainers.image.description="High-performance centralized direct-port scrim audio backend for League Voice Recorder" \
-    org.opencontainers.image.version="1.3.4" \
+    org.opencontainers.image.version="${APP_VERSION}" \
     org.opencontainers.image.authors="Betterix" \
     org.opencontainers.image.licenses="AGPL-3.0"
 
