@@ -13,7 +13,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 ## 🎯 Architecture & Versioning Notice
 
 Starting with version **1.3.x**, the backend has been completely redesigned and rewritten in **pure Rust** (Axum 0.8 & Tokio):
-- **Ultra-lean resource footprint**: Operates under **1.35 MiB** of resident RAM in production.
+- **Ultra-lean resource footprint**: Operates at **~10 MiB** of resident RAM for the Rust backend (**~18 MiB** total container RAM with optional Fail2ban).
 - **Native Direct-Port TLS 1.3**: Direct listener on port `8443` without requiring an external reverse proxy.
 - **Strict Single-Branch Workflow**: Development occurs exclusively against the `main` branch.
 - **Security-First**: Constant-time token verification, automated scanner honeypots, and hybrid datacenter/VPS crawler filtering.

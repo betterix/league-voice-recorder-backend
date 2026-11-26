@@ -20,7 +20,7 @@ It enables competitive esports teams, players, coaches, and analysts to:
 
 ### 2.1 Pure Rust Axum Engine & Ultra-Low Footprint
 - **Engine**: Rewritten entirely in pure Rust using [Axum 0.8](https://github.com/tokio-rs/axum) and [Tokio](https://tokio.rs/).
-- **Resource Footprint**: Consumes under **1.35 MiB resident RAM** in production (a ~99% reduction compared to the legacy ~150 MiB Python backend).
+- **Resource Footprint**: Consumes **~10 MiB resident RAM** for the Rust backend (**~18 MiB** total container RAM with optional Fail2ban enabled), compared to ~150 MiB for the legacy Python backend.
 - **Deprecation of Legacy Versions**: Versions prior to 1.3.x (e.g. 1.2.x Python FastAPI) are completely deprecated, incompatible, and unsupported. All development and production deployments strictly target the 1.3.x stream on the `main` branch.
 
 ### 2.2 Direct-Port Ingress (Native TLS 1.3)

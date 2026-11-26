@@ -51,8 +51,8 @@ Every incoming request is processed by a custom Tokio middleware layer in `src/l
 - **Real-Time Request Telemetry**: Logs client IP, HTTP method, path, HTTP response status code, and latency in microseconds (`µs`) or milliseconds (`ms`).
 - **Healthcheck Noise Suppression**: Container monitoring agents probe `/api/v1/health` every 15–30 seconds. To prevent Docker logs from being spammed with thousands of redundant lines, successful health checks (`200 OK`) are automatically filtered out from console logs. If a health probe ever returns an error, it is instantly logged at warning/error level.
 
-### 1.5 Bounded Memory Footprint (1.35 MiB Resident RAM)
-By avoiding garbage-collected runtimes and using zero-copy byte streaming, the entire application consumes **under 1.35 MiB of resident RAM** in production. Memory usage remains completely flat regardless of whether the server is idling or streaming multiple concurrent 100 MB recordings.
+### 1.5 Bounded Memory Footprint (~10 MiB Resident RAM)
+By avoiding garbage-collected runtimes and using zero-copy byte streaming, the Rust backend consumes **~10 MiB of resident RAM** in production (**~18 MiB** total container RAM when optional Fail2ban is enabled). Memory usage remains flat regardless of whether the server is idling or streaming multiple concurrent 100 MB recordings.
 
 ---
 

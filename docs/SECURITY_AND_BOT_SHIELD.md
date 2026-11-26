@@ -85,7 +85,7 @@ The backend employs a two-tier hybrid classifier:
 For environments requiring active kernel/firewall packet rejection directly inside the container, an optional **Fail2ban service** is integrated into the production image.
 
 ### 6.1 Conditional Activation (Disabled by Default)
-To preserve the minimal 1.35 MiB resident footprint, Fail2ban is **strictly optional and only starts if explicitly enabled**:
+To preserve the minimal ~10 MiB resident footprint, Fail2ban is **strictly optional and only starts if explicitly enabled** (adding ~8 MiB for a ~18 MiB total container footprint):
 - **Disabled (`ENABLE_FAIL2BAN=0` or omitted)**: The container entrypoint executes the Rust binary directly as unprivileged `appuser` (PID 1) with zero daemon overhead.
 - **Enabled (`ENABLE_FAIL2BAN=1` or `true`)**: The entrypoint boots `fail2ban-server` in the background, sets up graceful shutdown traps, and streams structured access logs to `/var/log/league-backend/access.log`.
 

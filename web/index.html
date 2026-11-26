@@ -517,7 +517,7 @@
     <div class="header-actions">
       <div class="badge-status">
         <div class="status-dot"></div>
-        <span>Pure Rust Axum • 1.35 MiB RAM</span>
+        <span>Pure Rust Axum • ~10 MiB RAM</span>
       </div>
       <div class="badge-status">
         <span>🔒 Native TLS 1.3</span>
@@ -593,7 +593,7 @@
 <a href="https://github.com/betterix/league-voice-recorder-backend/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/betterix/league-voice-recorder-backend?color=brightgreen&amp;logo=github" /></a>
 <a href="https://github.com/betterix/league-voice-recorder-backend/pkgs/container/league-voice-recorder-backend"><img alt="Docker Multi-Arch" src="https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ED?logo=docker&amp;logoColor=white" /></a>
 <a href="#doc-security_shield" onclick="showPage('security_shield'); return false;"><img alt="Security: TLS 1.3" src="https://img.shields.io/badge/Security-Native%20TLS%201.3-success?logo=shield" /></a>
-<a href="https://github.com/tokio-rs/axum"><img alt="RAM Usage" src="https://img.shields.io/badge/RAM%20Footprint-1.35%20MiB-blueviolet" /></a>
+<a href="https://github.com/tokio-rs/axum"><img alt="RAM Usage" src="https://img.shields.io/badge/RAM%20Footprint-~10%20MiB-blueviolet" /></a>
 <a href="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/ci.yml"><img alt="CI Status" src="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/ci.yml/badge.svg" /></a>
 <a href="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/betterix/league-voice-recorder-backend/actions/workflows/codeql.yml/badge.svg" /></a></p>
 <p><strong>Ultra-fast, ultra-lean, centralized remote audio storage service for the <a href="https://github.com/betterix/league-voice-recorder">League Voice Recorder</a> desktop application.</strong></p>
@@ -604,7 +604,7 @@
 </div>
 <h2>⚡ Key Highlights</h2>
 <ul>
-<li>🏎️ <strong>Ultra-Lean Resource Usage</strong>: Operates under <strong>1.35 MiB of resident RAM</strong> in production. Bounded 64 KB chunked streaming guarantees zero memory bloat even when transferring hundreds of megabytes.</li>
+<li>🏎️ <strong>Ultra-Lean Resource Usage</strong>: Operates at <strong>~10 MiB of resident RAM</strong> for the Rust backend (<strong>~18 MiB</strong> total container RAM with optional Fail2ban). Bounded 64 KB chunked streaming guarantees zero memory bloat even when transferring hundreds of megabytes.</li>
 <li>🔒 <strong>Direct-Port Ingress (Native TLS 1.3)</strong>: Binds directly to port <code>8443</code> (TCP) over native HTTPS with OpenSSL AEAD cipher suites (<code>TLS_AES_256_GCM_SHA384</code>, <code>TLS_CHACHA20_POLY1305_SHA256</code>). No Nginx or reverse proxy required.</li>
 <li>🐳 <strong>Native Multi-Architecture OCI Images</strong>: Automatically built and published to GHCR with native hardware compilation for both <strong><code>linux/amd64</code></strong> and <strong><code>linux/arm64</code></strong> without emulation slowdowns.</li>
 <li>📊 <strong>Real-Time Structured Access Logging</strong>: Immediate terminal visibility into incoming traffic (client IP, HTTP method, target route, HTTP status, and μs/ms latency) paired with automated <strong>healthcheck noise suppression</strong> to keep Docker logs clean.</li>
@@ -644,7 +644,7 @@ We strongly recommend all teams run <strong>v1.3.x</strong>. Legacy releases (&l
 <tr>
 <td style="text-align: left;"><strong><code>v1.3.x</code></strong> (Latest)</td>
 <td style="text-align: center;">🟢 <strong>Active / Recommended</strong></td>
-<td style="text-align: center;"><strong>~1.35 MiB</strong></td>
+<td style="text-align: center;"><strong>~10 MiB</strong> *(~18 MiB w/ Fail2ban)*</td>
 <td style="text-align: center;">Native Direct Port</td>
 <td style="text-align: left;">Pure Rust (Axum 0.8 + Tokio)</td>
 </tr>
@@ -866,8 +866,8 @@ cargo build --release
 <p>Every incoming request is processed by a custom Tokio middleware layer in <code>src/lib.rs</code>:
 - <strong>Real-Time Request Telemetry</strong>: Logs client IP, HTTP method, path, HTTP response status code, and latency in microseconds (<code>µs</code>) or milliseconds (<code>ms</code>).
 - <strong>Healthcheck Noise Suppression</strong>: Container monitoring agents probe <code>/api/v1/health</code> every 15–30 seconds. To prevent Docker logs from being spammed with thousands of redundant lines, successful health checks (<code>200 OK</code>) are automatically filtered out from console logs. If a health probe ever returns an error, it is instantly logged at warning/error level.</p>
-<h3>1.5 Bounded Memory Footprint (1.35 MiB Resident RAM)</h3>
-<p>By avoiding garbage-collected runtimes and using zero-copy byte streaming, the entire application consumes <strong>under 1.35 MiB of resident RAM</strong> in production. Memory usage remains completely flat regardless of whether the server is idling or streaming multiple concurrent 100 MB recordings.</p>
+<h3>1.5 Bounded Memory Footprint (~10 MiB Resident RAM)</h3>
+<p>By avoiding garbage-collected runtimes and using zero-copy byte streaming, the Rust backend consumes <strong>~10 MiB of resident RAM</strong> in production (<strong>~18 MiB</strong> total container RAM with optional Fail2ban enabled). Memory usage remains flat regardless of whether the server is idling or streaming multiple concurrent 100 MB recordings.</p>
 <hr />
 <h2>2. Directory Hierarchy</h2>
 <pre><code class="language-text">league-voice-recorder-backend/
@@ -1032,7 +1032,7 @@ cargo build --release
 <h2>6. Container-Level Fail2ban Integration (<code>ENABLE_FAIL2BAN</code>)</h2>
 <p>For environments requiring active kernel/firewall packet rejection directly inside the container, an optional <strong>Fail2ban service</strong> is integrated into the production image.</p>
 <h3>6.1 Conditional Activation (Disabled by Default)</h3>
-<p>To preserve the minimal 1.35 MiB resident footprint, Fail2ban is <strong>strictly optional and only starts if explicitly enabled</strong>:
+<p>To preserve the minimal ~10 MiB resident footprint, Fail2ban is <strong>strictly optional and only starts if explicitly enabled</strong> (adding ~8 MiB for a ~18 MiB total container footprint):
 - <strong>Disabled (<code>ENABLE_FAIL2BAN=0</code> or omitted)</strong>: The container entrypoint executes the Rust binary directly as unprivileged <code>appuser</code> (PID 1) with zero daemon overhead.
 - <strong>Enabled (<code>ENABLE_FAIL2BAN=1</code> or <code>true</code>)</strong>: The entrypoint boots <code>fail2ban-server</code> in the background, sets up graceful shutdown traps, and streams structured access logs to <code>/var/log/league-backend/access.log</code>.</p>
 <h3>6.2 Docker Compose Configuration</h3>
@@ -1553,7 +1553,7 @@ We strongly recommend all operators, teams, and developers run <strong>v1.3.x</s
 <h2>⚠️ Why 1.3.x is Required</h2>
 <p>The v1.3.x series represents a complete re-architecture from the ground up in memory-safe Rust:</p>
 <ol>
-<li><strong>Memory Safety &amp; Bounded Resource Consumption</strong>: Operates under <strong>1.35 MiB</strong> of RAM in production. Audio streaming is strictly bounded in 64 KB chunks, mitigating denial-of-service (DoS) via memory exhaustion.</li>
+<li><strong>Memory Safety &amp; Bounded Resource Consumption</strong>: Operates at <strong>~10 MiB</strong> of resident RAM for the Rust backend (<strong>~18 MiB</strong> total container RAM with Fail2ban). Audio streaming is strictly bounded in 64 KB chunks, mitigating denial-of-service (DoS) via memory exhaustion.</li>
 <li><strong>Timing Attack Elimination</strong>: All API credentials (<code>UPLOAD_KEY</code>, <code>PULL_KEY</code>, <code>ADMIN_KEY</code>) and web dashboard passwords are authenticated using <code>subtle::ConstantTimeEq</code>.</li>
 <li><strong>Active Exploit &amp; Scanner Defense</strong>: Includes automated zero-tolerance bans for vulnerability scanner probes (<code>/.env</code>, <code>/.git</code>, <code>/actuator</code>, <code>PROPFIND</code>), sliding-window brute-force rate limiters, and hybrid datacenter/VPS bot filtering.</li>
 <li><strong>Direct-Port TLS 1.3</strong>: Direct native TLS termination eliminates the need for intermediate reverse proxy buffering, preventing truncation of large audio files.</li>
@@ -1603,7 +1603,7 @@ We strongly recommend all operators, teams, and developers run <strong>v1.3.x</s
 <hr />
 <h2>🎯 Architecture &amp; Versioning Notice</h2>
 <p>Starting with version <strong>1.3.x</strong>, the backend has been completely redesigned and rewritten in <strong>pure Rust</strong> (Axum 0.8 &amp; Tokio):
-- <strong>Ultra-lean resource footprint</strong>: Operates under <strong>1.35 MiB</strong> of resident RAM in production.
+- <strong>Ultra-lean resource footprint</strong>: Operates at <strong>~10 MiB</strong> of resident RAM for the Rust backend (<strong>~18 MiB</strong> total container RAM with Fail2ban).
 - <strong>Native Direct-Port TLS 1.3</strong>: Direct listener on port <code>8443</code> without requiring an external reverse proxy.
 - <strong>Strict Single-Branch Workflow</strong>: Development occurs exclusively against the <code>main</code> branch.
 - <strong>Security-First</strong>: Constant-time token verification, automated scanner honeypots, and hybrid datacenter/VPS crawler filtering.</p>

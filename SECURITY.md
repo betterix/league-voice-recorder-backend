@@ -24,7 +24,7 @@ The **League Voice Recorder Backend** team takes the security and integrity of s
 
 The v1.3.x series represents a complete re-architecture from the ground up in memory-safe Rust:
 
-1. **Memory Safety & Bounded Resource Consumption**: Operates under **1.35 MiB** of RAM in production. Audio streaming is strictly bounded in 64 KB chunks, mitigating denial-of-service (DoS) via memory exhaustion.
+1. **Memory Safety & Bounded Resource Consumption**: Operates at **~10 MiB** of resident RAM for the Rust backend (**~18 MiB** total container RAM with Fail2ban). Audio streaming is strictly bounded in 64 KB chunks, mitigating denial-of-service (DoS) via memory exhaustion.
 2. **Timing Attack Elimination**: All API credentials (`UPLOAD_KEY`, `PULL_KEY`, `ADMIN_KEY`) and web dashboard passwords are authenticated using `subtle::ConstantTimeEq`.
 3. **Active Exploit & Scanner Defense**: Includes automated zero-tolerance bans for vulnerability scanner probes (`/.env`, `/.git`, `/actuator`, `PROPFIND`), sliding-window brute-force rate limiters, and hybrid datacenter/VPS bot filtering.
 4. **Direct-Port TLS 1.3**: Direct native TLS termination eliminates the need for intermediate reverse proxy buffering, preventing truncation of large audio files.

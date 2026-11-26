@@ -7,7 +7,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/betterix/league-voice-recorder-backend?color=brightgreen&logo=github)](https://github.com/betterix/league-voice-recorder-backend/releases)
 [![Docker Multi-Arch](https://img.shields.io/badge/Docker-amd64%20%7C%20arm64-2496ED?logo=docker&logoColor=white)](https://github.com/betterix/league-voice-recorder-backend/pkgs/container/league-voice-recorder-backend)
 [![Security: TLS 1.3](https://img.shields.io/badge/Security-Native%20TLS%201.3-success?logo=shield)](docs/SECURITY_AND_BOT_SHIELD.md)
-[![RAM Usage](https://img.shields.io/badge/RAM%20Footprint-1.35%20MiB-blueviolet)](https://github.com/tokio-rs/axum)
+[![RAM Usage](https://img.shields.io/badge/RAM%20Footprint-~10%20MiB-blueviolet)](https://github.com/tokio-rs/axum)
 [![CI Status](https://github.com/betterix/league-voice-recorder-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/betterix/league-voice-recorder-backend/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/betterix/league-voice-recorder-backend/actions/workflows/codeql.yml/badge.svg)](https://github.com/betterix/league-voice-recorder-backend/actions/workflows/codeql.yml)
 
@@ -25,7 +25,7 @@
 
 ## ⚡ Key Highlights
 
-- 🏎️ **Ultra-Lean Resource Usage**: Operates under **1.35 MiB of resident RAM** in production. Bounded 64 KB chunked streaming guarantees zero memory bloat even when transferring hundreds of megabytes.
+- 🏎️ **Ultra-Lean Resource Usage**: Operates at **~10 MiB of resident RAM** for the Rust backend (**~18 MiB** total container RAM with optional Fail2ban enabled). Bounded 64 KB chunked streaming guarantees zero memory bloat even when transferring hundreds of megabytes.
 - 🔒 **Direct-Port Ingress (Native TLS 1.3)**: Binds directly to port `8443` (TCP) over native HTTPS with OpenSSL AEAD cipher suites (`TLS_AES_256_GCM_SHA384`, `TLS_CHACHA20_POLY1305_SHA256`). No Nginx or reverse proxy required.
 - 🐳 **Native Multi-Architecture OCI Images**: Automatically built and published to GHCR with native hardware compilation for both **`linux/amd64`** and **`linux/arm64`** without emulation slowdowns.
 - 📊 **Real-Time Structured Access Logging**: Immediate terminal visibility into incoming traffic (client IP, HTTP method, target route, HTTP status, and μs/ms latency) paired with automated **healthcheck noise suppression** to keep Docker logs clean.
@@ -54,7 +54,7 @@
 
 | Version | Status | Memory (RAM) | TLS 1.3 | Engine |
 | :--- | :---: | :---: | :---: | :--- |
-| **`v1.3.x`** (Latest) | 🟢 **Active / Recommended** | **~1.35 MiB** | Native Direct Port | Pure Rust (Axum 0.8 + Tokio) |
+| **`v1.3.x`** (Latest) | 🟢 **Active / Recommended** | **~10 MiB** *(~18 MiB w/ Fail2ban)* | Native Direct Port | Pure Rust (Axum 0.8 + Tokio) |
 | `v1.2.x` | 🔴 **End-of-Life / Incompatible** | ~150 MiB | Reverse Proxy Required | Python (FastAPI + Uvicorn) |
 | `< v1.2.0` | 🔴 **End-of-Life** | Legacy | None | Prototype |
 
