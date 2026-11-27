@@ -14,6 +14,7 @@ pub fn router() -> Router<AppState> {
             "/recordings/{game_id}",
             get(recordings::get_recording)
                 .post(recordings::upload_recording)
+                .patch(recordings::update_recording_metadata)
                 .delete(recordings::delete_recording),
         )
         .route(

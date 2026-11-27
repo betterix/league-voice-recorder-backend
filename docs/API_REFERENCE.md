@@ -101,6 +101,23 @@ Retrieves metadata for a specific game recording.
 
 ---
 
+### `PATCH /api/v1/recordings/{game_id}`
+Updates metadata (`team_tag`, `notes`, `match_date`) for an existing recording without re-uploading the MP3 file.
+
+- **Required Roles**: `UPLOAD` or `ADMIN`. (`PULL` callers receive `403 Forbidden`).
+- **Request Body (`application/json`)**: Omitted fields are left unchanged; `null` or empty strings clear the field.
+```json
+{
+  "team_tag": "T1",
+  "notes": "Updated scrim notes",
+  "match_date": "2026-11-27"
+}
+```
+- **Response `200 OK`**: Returns the updated `RecordingMetadataResponse` object.
+- **Error `404 Not Found`**: When game ID does not exist.
+
+---
+
 ### `GET /api/v1/recordings/{game_id}/download`
 Streams the recording audio file with full HTTP Range request support.
 

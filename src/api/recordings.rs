@@ -435,6 +435,120 @@ pub async fn upload_recording(
     Ok((StatusCode::CREATED, Json(metadata)))
 }
 
+fn deserialize_double_option<'de, D>(deserializer: D) -> Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Some(Option::<String>::deserialize(deserializer)?))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateRecordingMetadataRequest {
+    #[serde(default, deserialize_with = "deserialize_double_option")]
+    pub team_tag: Option<Option<String>>,
+    #[serde(default, deserialize_with = "deserialize_double_option")]
+    pub notes: Option<Option<String>>,
+    #[serde(default, deserialize_with = "deserialize_double_option")]
+    pub match_date: Option<Option<String>>,
+}
+
+fn normalize_optional_field(
+    incoming: Option<Option<String>>,
+    existing: Option<String>,
+) -> Option<String> {
+    match incoming {
+        Some(Some(val)) => {
+            let trimmed = val.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }
+        Some(None) => None,
+        None => existing,
+    }
+}
+
+pub async fn update_recording_metadata(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AxumPath(game_id): AxumPath<String>,
+    Json(payload): Json<UpdateRecordingMetadataRequest>,
+) -> Result<Json<RecordingMetadataResponse>, (StatusCode, Json<serde_json::Value>)> {
+    require_write(&headers, &state)?;
+    let clean_id = validate_game_id(&game_id).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "detail": e.to_string() })),
+        )
+    })?;
+
+    let existing = sqlx::query_as::<_, Recording>(
+        r#"
+        SELECT id, game_id, filename, file_size, duration, bitrate, sample_rate,
+               sha256, team_tag, notes, match_date, created_at, updated_at
+        FROM recordings
+        WHERE game_id = ?1
+        "#,
+    )
+    .bind(&clean_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "detail": e.to_string() })),
+        )
+    })?;
+
+    let mut rec = match existing {
+        Some(r) => r,
+        None => {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "detail": format!("Recording for Game ID '{clean_id}' not found")
+                })),
+            ));
+        }
+    };
+
+    rec.team_tag = normalize_optional_field(payload.team_tag, rec.team_tag);
+    rec.notes = normalize_optional_field(payload.notes, rec.notes);
+    rec.match_date = normalize_optional_field(payload.match_date, rec.match_date);
+    rec.updated_at = now_iso();
+
+    sqlx::query(
+        r#"
+        UPDATE recordings
+        SET team_tag = ?1, notes = ?2, match_date = ?3, updated_at = ?4
+        WHERE game_id = ?5
+        "#,
+    )
+    .bind(&rec.team_tag)
+    .bind(&rec.notes)
+    .bind(&rec.match_date)
+    .bind(&rec.updated_at)
+    .bind(&clean_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "detail": format!("Database update failed: {e}") })),
+        )
+    })?;
+
+    info!(
+        "Updated recording metadata: game_id={}, team_tag={}",
+        rec.game_id,
+        rec.team_tag.as_deref().unwrap_or("none")
+    );
+
+    Ok(Json(rec.into()))
+}
+
 pub async fn delete_recording(
     State(state): State<AppState>,
     headers: HeaderMap,
